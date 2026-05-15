@@ -1,0 +1,21 @@
+{
+    "name": "Med-Guard Medical Assistant",
+    "short_name": "Med-Guard",
+    "description": "Engineer Michael's Intel-Laboratory Medical Assistant Dashboard",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#1e4548",
+    "theme_color": "#0f172a",
+    "icons": [
+        {
+            "src": "logo_v4.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "logo_v4.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

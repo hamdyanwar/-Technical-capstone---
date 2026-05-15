@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+scikit-learn
+pandas
+numpy
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
+google-generativeai
+python-dotenv
