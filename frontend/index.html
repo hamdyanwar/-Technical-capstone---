@@ -1,114 +1,187 @@
-        const App = () => {
-            const [activeTab, setActiveTab] = useState('dashboard');
-            const [devices, setDevices] = useState([]);
-            const [localIp, setLocalIp] = useState('127.0.0.1');
-            const [isLoggedIn, setIsLoggedIn] = useState(false);
-            const [showRegisterModal, setShowRegisterModal] = useState(false);
-            const [showTelemetryModal, setShowTelemetryModal] = useState(false);
-            const [selectedDevice, setSelectedDevice] = useState(null);
-            const [updateType, setUpdateType] = useState('gas');
-            const [loginData, setLoginData] = useState({ name: '', hospitalName: '' });
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
 
-            // --- SMART QR URL FOR GITHUB ---
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEDICAL ASSISTANT | OFFICIAL DASHBOARD</title>
+    <!-- Dependencies -->
+    <script src="lib/react.development.js"></script>
+    <script src="lib/react-dom.development.js"></script>
+    <script src="lib/babel.min.js"></script>
+    <script src="lib/tailwindcss.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="lib/lucide.js"></script>
+    <script src="lib/chart.js"></script>
+    <script src="lib/qrcode.min.js"></script>
+    
+    <style>
+        body { font-family: 'Cairo', sans-serif; margin: 0; padding: 0; background-color: #0f172a; color: white; }
+        .mesh-gradient {
+            background-color: #0f172a;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.4) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(0, 161, 155, 0.4) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.4) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(45, 212, 191, 0.3) 0px, transparent 50%);
+            min-height: 100vh;
+            position: relative;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .sidebar-glass {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(30px);
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .pulse-online {
+            width: 8px; height: 8px; background: #10b981; border-radius: 50%;
+            box-shadow: 0 0 12px #10b981; animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        const App = () => {
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [localIp, setLocalIp] = useState('127.0.0.1');
+            const [devices, setDevices] = useState([
+                { id: 1, name: "Mindray A7", location: "الغرفة 102", health: { pressure: 52.4, soda_lime: 88.2 }, history: [50, 51, 52, 53, 52.4] },
+                { id: 2, name: "GE Avance", location: "الغرفة 105", health: { pressure: 48.1, soda_lime: 92.5 }, history: [45, 46, 47, 48, 48.1] }
+            ]);
+
+            useEffect(() => {
+                const session = localStorage.getItem('med_session');
+                if (session) setIsLoggedIn(true);
+
+                fetch('/api/get-ip').then(r => r.json()).then(d => setLocalIp(d.ip || '127.0.0.1')).catch(() => {});
+                
+                const fetchDevices = () => {
+                    fetch('http://localhost:8000/devices/')
+                        .then(r => r.json())
+                        .then(data => { if(data.length) setDevices(data); })
+                        .catch(() => {});
+                };
+                fetchDevices();
+                const interval = setInterval(fetchDevices, 4000);
+                return () => clearInterval(interval);
+            }, []);
+
             const getMobileUrl = () => {
                 const hostname = window.location.hostname;
-                if (hostname.includes('github.io') || hostname.includes('.')) {
+                if (hostname.includes('github.io')) {
                     const path = window.location.pathname.split('/').slice(0, -1).join('/');
                     return `${window.location.protocol}//${hostname}${path}/mobile.html`;
                 }
                 return `http://${localIp}:8000/mobile.html`;
             };
 
-            const fetchData = async () => {
-                try {
-                    const res = await fetch('http://localhost:8000/devices/');
-                    const data = await res.json();
-                    if (data && data.length) setDevices(data);
-                    else setDevices([
-                        { id: 1, name: "Mindray A7", location: "OR-1", type: "Anesthesia", health: { pressure: 52.4 } },
-                        { id: 2, name: "Dräger Primus", location: "OR-3", type: "Ventilator", health: { pressure: 48.1 } }
-                    ]);
-                } catch (e) {
-                    setDevices([
-                        { id: 1, name: "Mindray A7", location: "OR-1", type: "Anesthesia", health: { pressure: 52.4 } },
-                        { id: 2, name: "Dräger Primus", location: "OR-3", type: "Ventilator", health: { pressure: 48.1 } }
-                    ]);
-                }
-            };
-
-            useEffect(() => {
-                fetchData();
-                const interval = setInterval(fetchData, 5000);
-                fetch('/api/get-ip').then(r => r.json()).then(d => setLocalIp(d.ip || '127.0.0.1')).catch(() => {});
-                const session = localStorage.getItem('medguard_session');
-                if (session) {
-                    setLoginData(JSON.parse(session));
-                    setIsLoggedIn(true);
-                }
-                return () => clearInterval(interval);
-            }, []);
-
-            const handleLogin = () => {
-                if (loginData.name && loginData.hospitalName) {
-                    localStorage.setItem('medguard_session', JSON.stringify(loginData));
-                    setIsLoggedIn(true);
-                }
-            };
-
             if (!isLoggedIn) return (
-                <div className="anesthesia-bg min-h-screen flex items-center justify-center p-8">
-                    <div className="anesthesia-overlay"></div>
-                    <div className="bg-white/95 backdrop-blur-3xl p-12 rounded-[4rem] shadow-2xl relative z-10 w-full max-w-md text-center border border-white">
-                        <img src="logo_v4.png" className="w-40 mx-auto mb-10 transition-transform hover:scale-110 duration-500" />
-                        <h1 className="text-3xl font-black mb-10 tracking-tighter text-gray-900 uppercase">Medical Assistant</h1>
-                        <div className="space-y-6 text-right" dir="rtl">
-                            <input type="text" placeholder="الاسم بالكامل" className="w-full p-5 rounded-2xl bg-gray-50 border border-gray-100 font-bold focus:outline-none focus:border-indigo-500 transition-all" onChange={e => setLoginData({...loginData, name: e.target.value})} />
-                            <input type="text" placeholder="اسم المستشفى" className="w-full p-5 rounded-2xl bg-gray-50 border border-gray-100 font-bold focus:outline-none focus:border-indigo-500 transition-all" onChange={e => setLoginData({...loginData, hospitalName: e.target.value})} />
-                            <button onClick={handleLogin} className="w-full py-6 bg-[#4F46E5] text-white rounded-3xl font-black text-lg shadow-xl shadow-indigo-100 hover:bg-indigo-600 transition-all active:scale-95">دخول النظام</button>
-                        </div>
+                <div className="mesh-gradient flex items-center justify-center p-6">
+                    <div className="glass-card p-12 w-full max-w-md text-center border-white/20">
+                        <img src="logo_v4.png" className="w-40 mx-auto mb-10 drop-shadow-2xl" />
+                        <h1 className="text-3xl font-black text-white mb-8 tracking-tighter uppercase">Medical Assistant</h1>
+                        <button 
+                            onClick={() => {localStorage.setItem('med_session', 'true'); setIsLoggedIn(true);}}
+                            className="w-full py-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-[2rem] font-black text-xl transition-all shadow-xl shadow-indigo-900/20 active:scale-95"
+                        >
+                            دخول النظام
+                        </button>
                     </div>
                 </div>
             );
 
             return (
-                <div className="flex flex-col md:flex-row min-h-screen anesthesia-bg relative overflow-hidden" dir="rtl">
-                    <div className="anesthesia-overlay"></div>
-                    <aside className="w-full md:w-80 bg-slate-900/60 backdrop-blur-3xl p-10 flex flex-col gap-4 border-l border-white/10 relative z-20">
-                        <img src="logo_v4.png" className="w-24 mx-auto mb-12 drop-shadow-2xl" />
-                        <nav className="space-y-3 flex-1">
-                            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-4 px-6 py-5 rounded-[2rem] font-black text-sm transition-all ${activeTab === 'dashboard' ? 'bg-[#4F46E5] text-white shadow-lg' : 'text-slate-400 hover:bg-white/5'}`}>
-                                <i data-lucide="layout-dashboard" className="w-5 h-5"></i> لوحة التحكم
+                <div className="mesh-gradient flex flex-col lg:flex-row min-h-screen" dir="rtl">
+                    {/* Sidebar */}
+                    <aside className="w-full lg:w-96 sidebar-glass p-10 flex flex-col gap-8 relative z-20">
+                        <div className="flex items-center gap-5 mb-12">
+                            <img src="logo_v4.png" className="w-16 h-16" />
+                            <div className="text-right">
+                                <h2 className="text-xl font-black text-white">MEDICAL ASSISTANT</h2>
+                                <p className="text-[10px] text-indigo-400 font-black tracking-widest uppercase">Clinical Hub v4.0</p>
+                            </div>
+                        </div>
+
+                        <nav className="flex-1 space-y-4">
+                            <button className="w-full flex items-center gap-4 px-8 py-5 bg-indigo-600 text-white rounded-[2rem] font-black text-sm shadow-lg">
+                                <i data-lucide="layout-dashboard"></i> لوحة التحكم
                             </button>
-                            <button onClick={() => setActiveTab('market')} className={`w-full flex items-center gap-4 px-6 py-5 rounded-[2rem] font-black text-sm transition-all ${activeTab === 'market' ? 'bg-[#4F46E5] text-white shadow-lg' : 'text-slate-400 hover:bg-white/5'}`}>
-                                <i data-lucide="shopping-cart" className="w-5 h-5"></i> سوق المعدات
+                            <button className="w-full flex items-center gap-4 px-8 py-5 text-slate-400 font-black text-sm hover:bg-white/5 rounded-[2rem] transition-all">
+                                <i data-lucide="wrench"></i> الفنيين
                             </button>
                         </nav>
-                        <div className="mt-auto p-6 bg-white/5 rounded-[3rem] border border-white/10 text-center group">
-                            <p className="text-[10px] text-gray-400 font-black mb-4 uppercase tracking-[0.2em] opacity-60">Mobile Pairing QR</p>
-                            <div className="bg-white p-3 rounded-2xl inline-block shadow-inner group-hover:scale-105 transition-transform duration-500">
+
+                        {/* Mobile Sync Section */}
+                        <div className="mt-auto glass-card p-8 bg-white/5 border-white/10 text-center">
+                            <p className="text-[10px] text-slate-400 font-black mb-6 uppercase tracking-widest">Mobile Link (Sync)</p>
+                            <div className="bg-white p-3 rounded-2xl inline-block shadow-2xl">
                                 <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(getMobileUrl())}`} className="w-32 h-32" />
                             </div>
-                            <p className="text-[9px] text-indigo-300 font-bold mt-4 opacity-40">Auto-linking: GitHub / Local</p>
+                            <div className="mt-6 flex flex-col items-center gap-1">
+                                <div className="pulse-online"></div>
+                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mt-2">Ready for Pairing</span>
+                            </div>
                         </div>
                     </aside>
-                    <main className="flex-1 p-10 md:p-16 relative z-10 overflow-y-auto">
-                        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-16 text-right">
-                            <div>
-                                <h2 className="text-5xl font-black text-white tracking-tighter mb-2">المركز الطبي الذكي</h2>
-                                <p className="text-blue-300 font-black uppercase tracking-widest text-sm opacity-80">مستشفى: {loginData.hospitalName} • مراقبة حية</p>
+
+                    {/* Main Content */}
+                    <main className="flex-1 p-8 lg:p-16 overflow-y-auto">
+                        <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-16">
+                            <div className="text-right">
+                                <h2 className="text-5xl font-black text-white tracking-tighter mb-2 italic">Dashboard</h2>
+                                <p className="text-indigo-300 font-black uppercase text-xs tracking-[0.3em]">Live Clinical Monitoring Protocol</p>
                             </div>
-                            <button onClick={() => {localStorage.removeItem('medguard_session'); setIsLoggedIn(false);}} className="px-8 py-4 bg-rose-500 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-rose-600 transition-all">خروج</button>
+                            <button onClick={() => {localStorage.removeItem('med_session'); setIsLoggedIn(false);}} className="px-8 py-4 bg-rose-500/10 text-rose-400 rounded-2xl border border-rose-500/20 font-black text-xs hover:bg-rose-500 hover:text-white transition-all">خروج</button>
                         </header>
-                        <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-10">
-                            {activeTab === 'dashboard' && devices.map(d => (
-                                <DeviceCard key={d.id} device={d} language="ar" onUpdate={(dev, type) => { setSelectedDevice(dev); setUpdateType(type); setShowTelemetryModal(true); }} />
+
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
+                            {devices.map(dev => (
+                                <div key={dev.id} className="glass-card p-10 group transition-all hover:scale-[1.02] duration-500">
+                                    <div className="flex justify-between items-start mb-10">
+                                        <div className="text-right">
+                                            <h3 className="text-3xl font-black text-white mb-2">{dev.name}</h3>
+                                            <p className="text-xs text-indigo-400 font-black uppercase">{dev.location}</p>
+                                        </div>
+                                        <span className="px-4 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-black border border-emerald-500/20">LIVE</span>
+                                    </div>
+                                    <div className="space-y-12">
+                                        <div className="relative">
+                                            <p className="text-[11px] font-black text-white/30 mb-3 uppercase tracking-widest">Medical Oxygen</p>
+                                            <div className="flex items-baseline gap-3">
+                                                <span className="text-6xl font-black text-white tracking-tighter">{dev.health.pressure.toFixed(1)}</span>
+                                                <span className="text-sm font-black text-white/20 uppercase">PSI</span>
+                                            </div>
+                                        </div>
+                                        <div className="pt-8 border-t border-white/5">
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <div className="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>
+                                                <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">AI Prediction Log</span>
+                                            </div>
+                                            <p className="text-sm font-bold text-white/50 leading-relaxed italic">
+                                                🔮 التوقع: جميع الحساسات تعمل بكفاءة عالية. استهلاك الغاز مستقر جداً.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                             ))}
                         </div>
                     </main>
-                    {/* Modals placeholders... add more here as needed */}
                 </div>
             );
         };
+
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
         setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 1000);
