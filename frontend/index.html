@@ -1,115 +1,15 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MEDICAL ASSISTANT | GitHub Edition</title>
-    <script src="lib/react.development.js"></script>
-    <script src="lib/react-dom.development.js"></script>
-    <script src="lib/babel.min.js"></script>
-    <script src="lib/tailwindcss.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-    <script src="lib/lucide.js"></script>
-    <script src="lib/chart.js"></script>
-    <script src="lib/qrcode.min.js"></script>
-    <style>
-        body { font-family: 'Cairo', sans-serif; }
-        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07); }
-        .mesh-gradient { background-color: #0f172a; background-image: radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(0, 161, 155, 0.15) 0px, transparent 50%); position: relative; overflow: hidden; }
-        .anesthesia-bg { background-color: #1e4548; background-image: url('anesthesia_machine.png'); background-size: cover; background-position: center; background-attachment: fixed; min-height: 100vh; }
-        .anesthesia-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(30, 110, 115, 0.75); pointer-events: none; z-index: 1; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-thumb { background: rgba(79, 70, 229, 0.3); border-radius: 10px; }
-    </style>
-</head>
-
-<body class="min-h-screen gradient-bg">
-    <div id="root" class="min-h-screen"></div>
-
-    <script type="text/babel">
-        const { useState, useEffect, useRef, useMemo } = React;
-
-        // --- UI Components ---
-        const StatusBadge = ({ status }) => {
-            const colors = {
-                'Good': 'bg-emerald-100 text-emerald-700 border-emerald-200',
-                'Warning': 'bg-amber-100 text-amber-700 border-amber-200',
-                'Critical': 'bg-rose-100 text-rose-700 border-rose-200',
-                'Active': 'bg-blue-100 text-blue-700 border-blue-200'
-            };
-            return <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${colors[status] || colors['Active']}`}>{status}</span>;
-        };
-
-        const SupplyChart = ({ datasets }) => {
-            const chartRef = useRef(null);
-            const chartInstance = useRef(null);
-            useEffect(() => {
-                if (chartInstance.current) chartInstance.current.destroy();
-                const ctx = chartRef.current.getContext('2d');
-                chartInstance.current = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: datasets.raw.map((_, i) => i),
-                        datasets: [
-                            { data: datasets.smooth, borderColor: '#4F46E5', fill: true, backgroundColor: 'rgba(79, 70, 229, 0.1)', borderWidth: 2, pointRadius: 0, tension: 0.4 },
-                            { data: datasets.ai, borderColor: '#1e293b', borderDash: [5, 5], borderWidth: 1, pointRadius: 0, tension: 0.4 }
-                        ]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
-                });
-                return () => { if (chartInstance.current) chartInstance.current.destroy(); };
-            }, [datasets]);
-            return <canvas ref={chartRef} className="w-full h-full" />;
-        };
-
-        const DeviceCard = ({ device, language }) => {
-            const history = device.history || [50, 52, 51, 53, 52.4];
-            const gasValue = device.health?.pressure || history[history.length - 1];
-            
-            const datasets = useMemo(() => ({
-                raw: history,
-                smooth: history.map(v => v + Math.sin(v)),
-                ai: history.map((v, i) => v - (i * 0.1))
-            }), [history]);
-
-            return (
-                <div className="bg-white/95 backdrop-blur-2xl p-8 rounded-[3rem] shadow-xl border border-white group transition-all hover:shadow-2xl hover:scale-[1.01]">
-                    <div className="flex justify-between items-start mb-8">
-                        <div dir="rtl" className="text-right">
-                            <h3 className="text-2xl font-black text-[#1e293b]">{device.name}</h3>
-                            <p className="text-xs text-[#4F46E5] font-bold opacity-70 uppercase tracking-widest">{device.type} • {device.location}</p>
-                        </div>
-                        <StatusBadge status="Active" />
-                    </div>
-                    <div className="space-y-8">
-                        <div className="relative">
-                            <p className="text-[11px] font-black text-indigo-500 mb-3 uppercase tracking-widest">Medical Gas Pressure</p>
-                            <div className="flex items-baseline gap-2 mb-4">
-                                <span className="text-5xl font-black text-[#1e293b] tracking-tighter">{gasValue.toFixed(1)}</span>
-                                <span className="text-xs font-bold text-gray-400 uppercase">PSI</span>
-                            </div>
-                            <div className="h-20"><SupplyChart datasets={datasets} /></div>
-                        </div>
-                        <div className="bg-indigo-50 p-6 rounded-[2rem] border border-indigo-100">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
-                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">AI Intelligence</span>
-                            </div>
-                            <p className="text-xs font-bold text-gray-600 italic">🔮 Prediction: System health is optimal. No critical drop expected.</p>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
         const App = () => {
             const [activeTab, setActiveTab] = useState('dashboard');
             const [devices, setDevices] = useState([]);
             const [localIp, setLocalIp] = useState('127.0.0.1');
             const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [showRegisterModal, setShowRegisterModal] = useState(false);
+            const [showTelemetryModal, setShowTelemetryModal] = useState(false);
+            const [selectedDevice, setSelectedDevice] = useState(null);
+            const [updateType, setUpdateType] = useState('gas');
+            const [loginData, setLoginData] = useState({ name: '', hospitalName: '' });
 
-            // --- SMART QR URL LOGIC ---
+            // --- SMART QR URL FOR GITHUB ---
             const getMobileUrl = () => {
                 const hostname = window.location.hostname;
                 if (hostname.includes('github.io') || hostname.includes('.')) {
@@ -119,27 +19,41 @@
                 return `http://${localIp}:8000/mobile.html`;
             };
 
-            useEffect(() => {
-                const session = localStorage.getItem('medguard_session');
-                if (session) setIsLoggedIn(true);
+            const fetchData = async () => {
+                try {
+                    const res = await fetch('http://localhost:8000/devices/');
+                    const data = await res.json();
+                    if (data && data.length) setDevices(data);
+                    else setDevices([
+                        { id: 1, name: "Mindray A7", location: "OR-1", type: "Anesthesia", health: { pressure: 52.4 } },
+                        { id: 2, name: "Dräger Primus", location: "OR-3", type: "Ventilator", health: { pressure: 48.1 } }
+                    ]);
+                } catch (e) {
+                    setDevices([
+                        { id: 1, name: "Mindray A7", location: "OR-1", type: "Anesthesia", health: { pressure: 52.4 } },
+                        { id: 2, name: "Dräger Primus", location: "OR-3", type: "Ventilator", health: { pressure: 48.1 } }
+                    ]);
+                }
+            };
 
-                const fetchData = () => {
-                    fetch('http://localhost:8000/devices/')
-                        .then(r => r.json())
-                        .then(data => setDevices(data.length ? data : [
-                            { id: 1, name: "Mindray A7", location: "OR-1", type: "Anesthesia", health: { pressure: 52.4 } },
-                            { id: 2, name: "Dräger Primus", location: "OR-3", type: "Ventilator", health: { pressure: 48.1 } }
-                        ]))
-                        .catch(() => setDevices([
-                            { id: 1, name: "Mindray A7", location: "OR-1", type: "Anesthesia", health: { pressure: 52.4 } },
-                            { id: 2, name: "Dräger Primus", location: "OR-3", type: "Ventilator", health: { pressure: 48.1 } }
-                        ]));
-                };
+            useEffect(() => {
                 fetchData();
                 const interval = setInterval(fetchData, 5000);
                 fetch('/api/get-ip').then(r => r.json()).then(d => setLocalIp(d.ip || '127.0.0.1')).catch(() => {});
+                const session = localStorage.getItem('medguard_session');
+                if (session) {
+                    setLoginData(JSON.parse(session));
+                    setIsLoggedIn(true);
+                }
                 return () => clearInterval(interval);
             }, []);
+
+            const handleLogin = () => {
+                if (loginData.name && loginData.hospitalName) {
+                    localStorage.setItem('medguard_session', JSON.stringify(loginData));
+                    setIsLoggedIn(true);
+                }
+            };
 
             if (!isLoggedIn) return (
                 <div className="anesthesia-bg min-h-screen flex items-center justify-center p-8">
@@ -147,7 +61,11 @@
                     <div className="bg-white/95 backdrop-blur-3xl p-12 rounded-[4rem] shadow-2xl relative z-10 w-full max-w-md text-center border border-white">
                         <img src="logo_v4.png" className="w-40 mx-auto mb-10 transition-transform hover:scale-110 duration-500" />
                         <h1 className="text-3xl font-black mb-10 tracking-tighter text-gray-900 uppercase">Medical Assistant</h1>
-                        <button onClick={() => {localStorage.setItem('medguard_session', 'true'); setIsLoggedIn(true);}} className="w-full py-6 bg-[#4F46E5] text-white rounded-3xl font-black text-lg shadow-xl shadow-indigo-100 hover:bg-indigo-600 transition-all active:scale-95">دخول النظام</button>
+                        <div className="space-y-6 text-right" dir="rtl">
+                            <input type="text" placeholder="الاسم بالكامل" className="w-full p-5 rounded-2xl bg-gray-50 border border-gray-100 font-bold focus:outline-none focus:border-indigo-500 transition-all" onChange={e => setLoginData({...loginData, name: e.target.value})} />
+                            <input type="text" placeholder="اسم المستشفى" className="w-full p-5 rounded-2xl bg-gray-50 border border-gray-100 font-bold focus:outline-none focus:border-indigo-500 transition-all" onChange={e => setLoginData({...loginData, hospitalName: e.target.value})} />
+                            <button onClick={handleLogin} className="w-full py-6 bg-[#4F46E5] text-white rounded-3xl font-black text-lg shadow-xl shadow-indigo-100 hover:bg-indigo-600 transition-all active:scale-95">دخول النظام</button>
+                        </div>
                     </div>
                 </div>
             );
@@ -157,9 +75,12 @@
                     <div className="anesthesia-overlay"></div>
                     <aside className="w-full md:w-80 bg-slate-900/60 backdrop-blur-3xl p-10 flex flex-col gap-4 border-l border-white/10 relative z-20">
                         <img src="logo_v4.png" className="w-24 mx-auto mb-12 drop-shadow-2xl" />
-                        <nav className="space-y-3 flex-1 text-right">
+                        <nav className="space-y-3 flex-1">
                             <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-4 px-6 py-5 rounded-[2rem] font-black text-sm transition-all ${activeTab === 'dashboard' ? 'bg-[#4F46E5] text-white shadow-lg' : 'text-slate-400 hover:bg-white/5'}`}>
                                 <i data-lucide="layout-dashboard" className="w-5 h-5"></i> لوحة التحكم
+                            </button>
+                            <button onClick={() => setActiveTab('market')} className={`w-full flex items-center gap-4 px-6 py-5 rounded-[2rem] font-black text-sm transition-all ${activeTab === 'market' ? 'bg-[#4F46E5] text-white shadow-lg' : 'text-slate-400 hover:bg-white/5'}`}>
+                                <i data-lucide="shopping-cart" className="w-5 h-5"></i> سوق المعدات
                             </button>
                         </nav>
                         <div className="mt-auto p-6 bg-white/5 rounded-[3rem] border border-white/10 text-center group">
@@ -174,17 +95,20 @@
                         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-16 text-right">
                             <div>
                                 <h2 className="text-5xl font-black text-white tracking-tighter mb-2">المركز الطبي الذكي</h2>
-                                <p className="text-blue-300 font-black uppercase tracking-widest text-sm opacity-80">نظام مراقبة الأجهزة الطبية المتصلة</p>
+                                <p className="text-blue-300 font-black uppercase tracking-widest text-sm opacity-80">مستشفى: {loginData.hospitalName} • مراقبة حية</p>
                             </div>
+                            <button onClick={() => {localStorage.removeItem('medguard_session'); setIsLoggedIn(false);}} className="px-8 py-4 bg-rose-500 text-white rounded-2xl font-black text-sm shadow-xl hover:bg-rose-600 transition-all">خروج</button>
                         </header>
                         <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-10">
-                            {devices.map(d => <DeviceCard key={d.id} device={d} />)}
+                            {activeTab === 'dashboard' && devices.map(d => (
+                                <DeviceCard key={d.id} device={d} language="ar" onUpdate={(dev, type) => { setSelectedDevice(dev); setUpdateType(type); setShowTelemetryModal(true); }} />
+                            ))}
                         </div>
                     </main>
+                    {/* Modals placeholders... add more here as needed */}
                 </div>
             );
         };
-
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
         setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 1000);
