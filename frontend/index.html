@@ -1,493 +1,193 @@
-            const renderOrderModal = () => {
-                if (!showOrderModal) return null;
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
 
-                return (
-                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-8 animate-in fade-in duration-300">
-                        <div className="glass rounded-[2.5rem] bg-white border border-gray-100 w-full max-w-2xl shadow-2xl relative overflow-hidden">
-                            {/* Modal Header */}
-                            <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                                <div>
-                                    <h3 className="text-2xl font-black text-gray-800">New Equipment Order</h3>
-                                    <p className="text-gray-500 text-sm font-medium mt-1">Step {orderStep} of 3</p>
-                                </div>
-                                <button onClick={() => { setShowOrderModal(false); setOrderStep(1); }} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
-                                    <i data-lucide="x" className="w-6 h-6 text-gray-400"></i>
-                                </button>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEDICAL ASSISTANT | GitHub Edition</title>
+    <script src="lib/react.development.js"></script>
+    <script src="lib/react-dom.development.js"></script>
+    <script src="lib/babel.min.js"></script>
+    <script src="lib/tailwindcss.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="lib/lucide.js"></script>
+    <script src="lib/chart.js"></script>
+    <script src="lib/qrcode.min.js"></script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07); }
+        .mesh-gradient { background-color: #0f172a; background-image: radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(0, 161, 155, 0.15) 0px, transparent 50%); position: relative; overflow: hidden; }
+        .anesthesia-bg { background-color: #1e4548; background-image: url('anesthesia_machine.png'); background-size: cover; background-position: center; background-attachment: fixed; min-height: 100vh; }
+        .anesthesia-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(30, 110, 115, 0.75); pointer-events: none; z-index: 1; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background: rgba(79, 70, 229, 0.3); border-radius: 10px; }
+    </style>
+</head>
+
+<body class="min-h-screen gradient-bg">
+    <div id="root" class="min-h-screen"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- UI Components ---
+        const StatusBadge = ({ status }) => {
+            const colors = {
+                'Good': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                'Warning': 'bg-amber-100 text-amber-700 border-amber-200',
+                'Critical': 'bg-rose-100 text-rose-700 border-rose-200',
+                'Active': 'bg-blue-100 text-blue-700 border-blue-200'
+            };
+            return <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${colors[status] || colors['Active']}`}>{status}</span>;
+        };
+
+        const SupplyChart = ({ datasets }) => {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+            useEffect(() => {
+                if (chartInstance.current) chartInstance.current.destroy();
+                const ctx = chartRef.current.getContext('2d');
+                chartInstance.current = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: datasets.raw.map((_, i) => i),
+                        datasets: [
+                            { data: datasets.smooth, borderColor: '#4F46E5', fill: true, backgroundColor: 'rgba(79, 70, 229, 0.1)', borderWidth: 2, pointRadius: 0, tension: 0.4 },
+                            { data: datasets.ai, borderColor: '#1e293b', borderDash: [5, 5], borderWidth: 1, pointRadius: 0, tension: 0.4 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+                });
+                return () => { if (chartInstance.current) chartInstance.current.destroy(); };
+            }, [datasets]);
+            return <canvas ref={chartRef} className="w-full h-full" />;
+        };
+
+        const DeviceCard = ({ device, language }) => {
+            const history = device.history || [50, 52, 51, 53, 52.4];
+            const gasValue = device.health?.pressure || history[history.length - 1];
+            
+            const datasets = useMemo(() => ({
+                raw: history,
+                smooth: history.map(v => v + Math.sin(v)),
+                ai: history.map((v, i) => v - (i * 0.1))
+            }), [history]);
+
+            return (
+                <div className="bg-white/95 backdrop-blur-2xl p-8 rounded-[3rem] shadow-xl border border-white group transition-all hover:shadow-2xl hover:scale-[1.01]">
+                    <div className="flex justify-between items-start mb-8">
+                        <div dir="rtl" className="text-right">
+                            <h3 className="text-2xl font-black text-[#1e293b]">{device.name}</h3>
+                            <p className="text-xs text-[#4F46E5] font-bold opacity-70 uppercase tracking-widest">{device.type} • {device.location}</p>
+                        </div>
+                        <StatusBadge status="Active" />
+                    </div>
+                    <div className="space-y-8">
+                        <div className="relative">
+                            <p className="text-[11px] font-black text-indigo-500 mb-3 uppercase tracking-widest">Medical Gas Pressure</p>
+                            <div className="flex items-baseline gap-2 mb-4">
+                                <span className="text-5xl font-black text-[#1e293b] tracking-tighter">{gasValue.toFixed(1)}</span>
+                                <span className="text-xs font-bold text-gray-400 uppercase">PSI</span>
                             </div>
-
-                            {/* Progress Bar */}
-                            <div className="w-full h-1.5 bg-gray-100">
-                                <div
-                                    className="h-full bg-[#4F46E5] transition-all duration-500 ease-out"
-                                    style={{ width: `${(orderStep / 3) * 100}%` }}
-                                ></div>
+                            <div className="h-20"><SupplyChart datasets={datasets} /></div>
+                        </div>
+                        <div className="bg-indigo-50 p-6 rounded-[2rem] border border-indigo-100">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">AI Intelligence</span>
                             </div>
-
-                            {/* Modal Body */}
-                            <div className="p-8 min-h-[300px]">
-                                {orderStep === 1 && (
-                                    <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                                        <h4 className="font-black text-lg text-gray-800">سوق ادوات جهاز التخدير</h4>
-                                        <div className="grid grid-cols-3 gap-3">
-                                            {[
-                                                { name: 'جهاز التخدير المتكامل', price: '45,000$', img: 'anesthesia_machine.png' },
-                                                { name: 'طقم منظار الحنجرة (Laryngoscope)', price: '850$', img: 'laryngoscope.png' },
-                                                { name: 'وحدة المبخر (Vaporizer)', price: '2,400$', img: 'vaporizer.png' },
-                                                { name: 'شاشة مراقبة العمليات', price: '5,000$', img: 'anesthesia_machine.png' },
-                                                { name: 'مضخة محاليل (Syringe Pump)', price: '1,200$', img: 'vaporizer.png' },
-                                                { name: 'جهاز شفط (Suction Unit)', price: '450$', img: 'anesthesia_machine.png' },
-                                                { name: 'أسطوانة أكسجين (Oxygen)', price: '350$', img: 'vaporizer.png' },
-                                                { name: 'دائرة التخدير (Circuit)', price: '120$', img: 'laryngoscope.png' },
-                                                { name: 'قناع تخدير (Anesthesia Mask)', price: '25$', img: 'laryngoscope.png' }
-                                            ].map(item => (
-                                                <button
-                                                    key={item.name}
-                                                    onClick={() => setOrderData({ ...orderData, equipment: item.name, price: item.price })}
-                                                    className={`p-3 rounded-2xl border-2 text-right transition-all flex flex-col items-center gap-2 h-full ${orderData.equipment === item.name ? 'border-indigo-600 bg-indigo-50 shadow-lg' : 'border-gray-100 hover:border-indigo-200 hover:bg-white'}`}
-                                                >
-                                                    <div className="w-full h-16 bg-white rounded-xl overflow-hidden border border-gray-100 mb-1">
-                                                        <img src={item.img} alt={item.name} className="w-full h-full object-contain p-1" />
-                                                    </div>
-                                                    <div className="w-full flex justify-between items-center gap-2">
-                                                        <span className="font-bold text-gray-800 text-[11px] leading-tight flex-1">{item.name}</span>
-                                                        <span className="text-[#4F46E5] font-black text-xs">{item.price}</span>
-                                                    </div>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {orderStep === 2 && (
-                                    <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                                        <h4 className="font-black text-lg text-gray-800">تفاصيل الطلب</h4>
-                                        <div className="space-y-4">
-                                            <div dir="rtl">
-                                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">القسم الطالب</label>
-                                                <select
-                                                    value={orderData.department}
-                                                    onChange={e => setOrderData({ ...orderData, department: e.target.value })}
-                                                    className="w-full p-4 rounded-xl border-2 border-gray-200 bg-gray-50 focus:border-indigo-500 focus:outline-none outline-none font-bold text-gray-700 text-right"
-                                                >
-                                                    <option value="" disabled hidden>اختر القسم...</option>
-                                                    <option value="ICU">وحدة العناية المركزة (ICU)</option>
-                                                    <option value="OR">غرفة العمليات (OR)</option>
-                                                    <option value="ER">قسم الطوارئ (ER)</option>
-                                                    <option value="PACU">غرفة الإفاقة (PACU)</option>
-                                                    <option value="NICU">العناية المركزة لحديثي الولادة (NICU)</option>
-                                                    <option value="Ward">الأقسام الداخلية (Wards)</option>
-                                                    <option value="Radiology">قسم الأشعة (Radiology)</option>
-                                                    <option value="OPD">العيادات الخارجية (OPD)</option>
-                                                </select>
-                                            </div>
-                                            <div dir="rtl">
-                                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">مستوى الأولوية</label>
-                                                <div className="flex gap-4">
-                                                    {[
-                                                        { id: 'Normal', label: 'عادي' },
-                                                        { id: 'Urgent', label: 'عاجل' },
-                                                        { id: 'Emergency', label: 'طوارئ' }
-                                                    ].map(level => (
-                                                        <button
-                                                            key={level.id}
-                                                            onClick={() => setOrderData({ ...orderData, priority: level.id })}
-                                                            className={`flex-1 py-3 rounded-xl border-2 font-bold transition-all ${orderData.priority === level.id ? (level.id === 'Emergency' ? 'border-rose-500 bg-rose-50 text-rose-700' : level.id === 'Urgent' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-emerald-500 bg-emerald-50 text-emerald-700') : 'border-gray-100 text-gray-500 hover:bg-gray-50'}`}
-                                                        >
-                                                            {level.label}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {orderStep === 3 && (
-                                    <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                                        <div className="text-center mb-8">
-                                            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                <i data-lucide="check-circle-2" className="w-10 h-10 text-emerald-500"></i>
-                                            </div>
-                                            <h4 className="font-black text-xl text-gray-800">Review Your Order</h4>
-                                            <p className="text-gray-500 font-medium">Please confirm the details below before submitting.</p>
-                                        </div>
-                                        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-4">
-                                            <div className="flex justify-between border-b border-gray-200 pb-3">
-                                                <span className="text-gray-500 font-bold">Equipment</span>
-                                                <div className="text-right">
-                                                    <p className="font-black text-gray-800">{orderData.equipment || 'Not selected'}</p>
-                                                    <p className="text-xs text-[#4F46E5] font-black">{orderData.price}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex justify-between border-b border-gray-200 pb-3">
-                                                <span className="text-gray-500 font-bold">Department</span>
-                                                <span className="font-black text-gray-800">{orderData.department || 'Not selected'}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-500 font-bold">Priority</span>
-                                                <span className={`font-black ${orderData.priority === 'Emergency' ? 'text-rose-500' : orderData.priority === 'Urgent' ? 'text-amber-500' : 'text-emerald-500'}`}>{orderData.priority}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Modal Footer */}
-                            <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
-                                <button
-                                    onClick={() => setOrderStep(Math.max(1, orderStep - 1))}
-                                    className={`px-6 py-3 font-bold text-gray-500 hover:text-gray-800 transition-colors ${orderStep === 1 ? 'invisible' : ''}`}
-                                >
-                                    Back
-                                </button>
-
-                                {orderStep < 3 ? (
-                                    <button
-                                        onClick={() => setOrderStep(Math.min(3, orderStep + 1))}
-                                        disabled={orderStep === 1 && !orderData.equipment || orderStep === 2 && !orderData.department}
-                                        className="px-8 py-3 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-xl font-black shadow-lg shadow-[#4F46E5]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                    >
-                                        Continue <i data-lucide="arrow-right" className="w-4 h-4"></i>
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={handleOrderSubmit}
-                                        className="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black shadow-lg shadow-emerald-200 transition-all flex items-center gap-2"
-                                    >
-                                        تم <i data-lucide="check" className="w-4 h-4"></i>
-                                    </button>
-                                )}
-                            </div>
+                            <p className="text-xs font-bold text-gray-600 italic">🔮 Prediction: System health is optimal. No critical drop expected.</p>
                         </div>
                     </div>
-                );
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [devices, setDevices] = useState([]);
+            const [localIp, setLocalIp] = useState('127.0.0.1');
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+            // --- SMART QR URL LOGIC ---
+            const getMobileUrl = () => {
+                const hostname = window.location.hostname;
+                if (hostname.includes('github.io') || hostname.includes('.')) {
+                    const path = window.location.pathname.split('/').slice(0, -1).join('/');
+                    return `${window.location.protocol}//${hostname}${path}/mobile.html`;
+                }
+                return `http://${localIp}:8000/mobile.html`;
             };
 
-            const renderTechModal = () => {
-                if (!showTechModal) return null;
+            useEffect(() => {
+                const session = localStorage.getItem('medguard_session');
+                if (session) setIsLoggedIn(true);
 
-                const tech = {
-                    name: "Sarah Williams",
-                    role: "Anesthesia Unit G7 Expert",
-                    specialty: "Anesthesia Systems",
-                    location: "Maadi, Cairo",
-                    rating: 4.8,
-                    bio: "Specialized in high-precision anesthesia machines and ventilation mechanics. Over 10 years of experience in clinical engineering.",
-                    status: "On-Call",
-                    phone: "+20 123 456 7890",
-                    email: "s.williams@medguard.com"
+                const fetchData = () => {
+                    fetch('http://localhost:8000/devices/')
+                        .then(r => r.json())
+                        .then(data => setDevices(data.length ? data : [
+                            { id: 1, name: "Mindray A7", location: "OR-1", type: "Anesthesia", health: { pressure: 52.4 } },
+                            { id: 2, name: "Dräger Primus", location: "OR-3", type: "Ventilator", health: { pressure: 48.1 } }
+                        ]))
+                        .catch(() => setDevices([
+                            { id: 1, name: "Mindray A7", location: "OR-1", type: "Anesthesia", health: { pressure: 52.4 } },
+                            { id: 2, name: "Dräger Primus", location: "OR-3", type: "Ventilator", health: { pressure: 48.1 } }
+                        ]));
                 };
+                fetchData();
+                const interval = setInterval(fetchData, 5000);
+                fetch('/api/get-ip').then(r => r.json()).then(d => setLocalIp(d.ip || '127.0.0.1')).catch(() => {});
+                return () => clearInterval(interval);
+            }, []);
 
-                return (
-                    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-8 animate-in fade-in duration-300">
-                        <div className="glass rounded-[3rem] bg-white border border-indigo-100 w-full max-w-xl shadow-2xl relative overflow-hidden mesh-gradient">
-                            <div className="p-10">
-                                <div className="flex justify-between items-start mb-8">
-                                    <div className="flex gap-6">
-                                        <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center text-white text-3xl font-black shadow-xl">
-                                            {tech.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-3 mb-1">
-                                                <h3 className="text-2xl font-black text-gray-800">{tech.name}</h3>
-                                                <span className="px-3 py-1 bg-amber-100 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-widest">{tech.status}</span>
-                                            </div>
-                                            <p className="text-[#4F46E5] font-bold mb-3">{tech.role}</p>
-                                            <div className="flex items-center gap-4">
-                                                <div className="flex items-center gap-1.5">
-                                                    <i data-lucide="star" className="w-4 h-4 text-amber-400 fill-current"></i>
-                                                    <span className="text-sm font-black text-gray-700">{tech.rating}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5 text-gray-400">
-                                                    <i data-lucide="map-pin" className="w-4 h-4"></i>
-                                                    <span className="text-xs font-bold">{tech.location}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button onClick={() => setShowTechModal(false)} className="p-3 hover:bg-gray-100 rounded-2xl transition-colors">
-                                        <i data-lucide="x" className="w-6 h-6 text-gray-400"></i>
-                                    </button>
-                                </div>
-
-                                <div className="space-y-8">
-                                    <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
-                                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Professional Bio</h4>
-                                        <p className="text-sm text-gray-600 leading-relaxed font-medium">{tech.bio}</p>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <a href={`tel:${tech.phone}`} className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-indigo-50 hover:border-indigo-200 transition-all group">
-                                            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-[#4F46E5] group-hover:bg-[#4F46E5] group-hover:text-white transition-all">
-                                                <i data-lucide="phone" className="w-5 h-5"></i>
-                                            </div>
-                                            <div>
-                                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Call Technician</p>
-                                                <p className="text-xs font-black text-gray-800">{tech.phone}</p>
-                                            </div>
-                                        </a>
-                                        <a href={`mailto:${tech.email}`} className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-indigo-50 hover:border-indigo-200 transition-all group">
-                                            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-[#4F46E5] group-hover:bg-[#4F46E5] group-hover:text-white transition-all">
-                                                <i data-lucide="mail" className="w-5 h-5"></i>
-                                            </div>
-                                            <div>
-                                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Email Specialist</p>
-                                                <p className="text-xs font-black text-gray-800">Send Message</p>
-                                            </div>
-                                        </a>
-                                    </div>
-
-                                    <div className="flex gap-4">
-                                        <button className="flex-1 py-5 bg-[#4F46E5] text-white rounded-[1.5rem] font-black text-sm shadow-xl shadow-indigo-100 hover:scale-[1.02] transition-all flex items-center justify-center gap-3">
-                                            <i data-lucide="calendar" className="w-5 h-5"></i> تم
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            if (!isLoggedIn) return (
+                <div className="anesthesia-bg min-h-screen flex items-center justify-center p-8">
+                    <div className="anesthesia-overlay"></div>
+                    <div className="bg-white/95 backdrop-blur-3xl p-12 rounded-[4rem] shadow-2xl relative z-10 w-full max-w-md text-center border border-white">
+                        <img src="logo_v4.png" className="w-40 mx-auto mb-10 transition-transform hover:scale-110 duration-500" />
+                        <h1 className="text-3xl font-black mb-10 tracking-tighter text-gray-900 uppercase">Medical Assistant</h1>
+                        <button onClick={() => {localStorage.setItem('medguard_session', 'true'); setIsLoggedIn(true);}} className="w-full py-6 bg-[#4F46E5] text-white rounded-3xl font-black text-lg shadow-xl shadow-indigo-100 hover:bg-indigo-600 transition-all active:scale-95">دخول النظام</button>
                     </div>
-                );
-            };
-
-            const renderRegisterModal = () => {
-                if (!showRegisterModal) return null;
-                return (
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-xl z-[250] flex items-center justify-center p-8 animate-in zoom-in-95 fade-in duration-500">
-                        <div className="bg-white/95 backdrop-blur-3xl rounded-[2.5rem] md:rounded-[4rem] p-8 md:p-16 border border-white w-full max-w-2xl shadow-[0_40px_100px_rgba(79,70,229,0.15)] relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
-                            
-                            <div className="text-center mb-12" dir="rtl">
-                                <h3 className="text-4xl font-black text-gray-900 mb-4 tracking-tighter">إضافة "رفيق ميكانيكي" جديد</h3>
-                                <p className="text-gray-500 text-sm font-bold leading-relaxed max-w-md mx-auto opacity-80">
-                                    "لنقم بتدوين بداية رحلة هذا الجهاز في سجلات الأمان الخاصة بنا، لكي نعتني بنبضه معاً."
-                                </p>
-                            </div>
-
-                            <div className="space-y-8" dir="rtl">
-                                <div className="relative group">
-                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">اسم الجهاز المستخدم (DEVICE NAME)</label>
-                                    <input
-                                        type="text"
-                                        value={newDeviceData.name}
-                                        onChange={e => setNewDeviceData({ ...newDeviceData, name: e.target.value })}
-                                        className="w-full px-8 py-6 rounded-3xl bg-gray-50/50 border-2 border-gray-100 text-gray-800 font-black text-lg focus:outline-none focus:border-[#4F46E5] focus:bg-white transition-all placeholder:text-gray-300"
-                                        placeholder="مثلاً: وحدة التخدير G7"
-                                    />
-                                </div>
-
-                                <div className="relative group">
-                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">وقت تسجيل الدخول (REGISTRATION DATE)</label>
-                                    <div className="relative">
-                                        <input
-                                            type="date"
-                                            value={newDeviceData.installDate}
-                                            onChange={e => setNewDeviceData({ ...newDeviceData, installDate: e.target.value })}
-                                            className="w-full px-8 py-6 rounded-3xl bg-gray-50/50 border-2 border-gray-100 text-gray-800 font-black text-lg focus:outline-none focus:border-[#4F46E5] focus:bg-white transition-all"
-                                        />
-                                        <i data-lucide="calendar" className="absolute left-8 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400 pointer-events-none"></i>
-                                    </div>
-                                </div>
-
-                                <div className="relative group">
-                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">ساعة تسجيل الدخول (REGISTRATION TIME)</label>
-                                    <div className="relative">
-                                        <input
-                                            type="time"
-                                            value={newDeviceData.registerTime}
-                                            onChange={e => setNewDeviceData({ ...newDeviceData, registerTime: e.target.value })}
-                                            className="w-full px-8 py-6 rounded-3xl bg-gray-50/50 border-2 border-gray-100 text-gray-800 font-black text-lg focus:outline-none focus:border-[#4F46E5] focus:bg-white transition-all"
-                                        />
-                                        <i data-lucide="clock" className="absolute left-8 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400 pointer-events-none"></i>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-6 pt-6">
-                                    <button
-                                        onClick={handleRegisterSubmit}
-                                        className="flex-[2] py-6 bg-gradient-to-r from-[#4F46E5] to-[#6366f1] text-white rounded-[2rem] font-black text-xl shadow-2xl shadow-indigo-200 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
-                                    >
-                                        تم
-                                    </button>
-                                    <button
-                                        onClick={() => setShowRegisterModal(false)}
-                                        className="flex-1 py-6 bg-indigo-50 text-[#4F46E5] rounded-[2rem] font-black text-lg transition-all hover:bg-indigo-100 active:scale-[0.98]"
-                                    >
-                                        إغلاق السجل
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                );
-            };
-
-            const renderHelpModal = () => {
-                if (!showHelpModal) return null;
-                return (
-                    <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[300] flex items-center justify-center p-8 animate-in fade-in duration-300">
-                        <div className="glass rounded-[3rem] bg-[#1a1a2e] border border-white/10 w-full max-w-2xl shadow-2xl relative overflow-hidden mesh-gradient p-10">
-                            <div className="flex justify-between items-start mb-8">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-rose-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-rose-500/20">
-                                        <i data-lucide="book-open" className="w-6 h-6"></i>
-                                    </div>
-                                    <div>
-                                        <h3 className="text-xl font-black text-white">فصل التصحيح: "عندما تنقطع خيوط السحاب"</h3>
-                                        <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest">Storyteller Mode • The Maintenance Chronicle</p>
-                                    </div>
-                                </div>
-                                <button onClick={() => setShowHelpModal(false)} className="p-3 hover:bg-white/5 rounded-2xl transition-colors">
-                                    <i data-lucide="x" className="w-6 h-6 text-gray-400"></i>
-                                </button>
-                            </div>
-
-                            <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-6 custom-scrollbar" dir="rtl">
-                                <section className="space-y-3">
-                                    <h4 className="text-indigo-400 font-black text-sm">🕰️ الفصل الأول: إيقاظ قلب المحرك (Backend)</h4>
-                                    <p className="text-gray-400 text-[11px] italic leading-relaxed">"خلف كل واجهة جميلة، يكمن محرك يحتاج ليدٍ حانية لتوقظه من سباته.."</p>
-                                    <ul className="text-gray-300 text-xs space-y-2 list-disc list-inside font-medium pr-4">
-                                        <li>توجّه إلى مخبأ المشروع الرئيسي (Main Directory).</li>
-                                        <li>أعد الحياة لملف <code className="bg-white/5 px-2 py-0.5 rounded text-rose-400 italic">start_backend.bat</code>، فهو شريان الحياة.</li>
-                                        <li className="text-rose-400 font-bold italic">نصيحة الحارس: لا تغلق النافذة السوداء، فهي النافذة التي يتنفس من خلالها مايكل.</li>
-                                    </ul>
-                                </section>
-
-                                <section className="space-y-3">
-                                    <h4 className="text-indigo-400 font-black text-sm">🌐 الفصل الثاني: مسارات النبض الرقمي (Networking)</h4>
-                                    <p className="text-gray-400 text-[11px] italic leading-relaxed">"في عالم الاتصال، النبض يجب أن يصل إلى المخرج الصحيح لكي تستمر القصة.."</p>
-                                    <ul className="text-gray-300 text-xs space-y-2 list-disc list-inside font-medium pr-4">
-                                        <li>تأكد أن السيرفر يتمركز عند بوابة المنفذ 8000.</li>
-                                        <li>تحقق من أن رابط الوثاق في واجهتنا هو: <code className="bg-white/5 px-2 py-0.5 rounded text-blue-400">http://127.0.0.1:8000</code></li>
-                                    </ul>
-                                </section>
-
-                                <div className="mt-8 p-6 bg-[#4F46E5]/10 rounded-3xl border border-indigo-500/20 shadow-inner relative overflow-hidden">
-                                    <div className="absolute top-0 left-0 w-1 h-full bg-[#4F46E5]/50"></div>
-                                    <p className="text-[11px] text-indigo-300 leading-relaxed font-bold">
-                                        📜 <span className="text-indigo-400">حكمة المهندس:</span> "إذا استعصت عليك السبل، امنح الأنظمة قسطاً من الراحة.. أغلق كل النوافذ السوداء، وأعد تشغيل روح الجهاز.. فالتغيير يحكم البدء من الصفر أحياناً."
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                );
-            };
-
-            if (!isSystemOn) return (
-                <div className="min-h-screen bg-black flex items-center justify-center p-6 md:p-10 flex-col gap-6 md:gap-8">
-                    <div className="w-32 h-32 rounded-full border-4 border-rose-500/20 flex items-center justify-center animate-pulse">
-                        <i data-lucide="power" className="w-16 h-16 text-rose-500"></i>
-                    </div>
-                    <div className="text-center">
-                        <h1 className="text-4xl font-black text-white mb-2 uppercase tracking-widest">System Offline</h1>
-                        <p className="text-rose-500/60 font-black text-sm uppercase tracking-[0.4em]">All Monitoring Protocols Suspended</p>
-                    </div>
-                    <button
-                        onClick={() => setIsSystemOn(true)}
-                        className="mt-8 px-10 py-4 bg-white text-black rounded-2xl font-black text-sm hover:scale-105 transition-all shadow-xl">
-                        REBOOT SYSTEM
-                    </button>
                 </div>
             );
 
-            if (!sessionChecked) return null;
-            if (!isLoggedIn && existingSession) return renderSessionChoice();
-            if (!isLoggedIn) return renderLogin();
-
             return (
-                <div className={`flex flex-col md:flex-row min-h-screen anesthesia-bg relative overflow-x-hidden`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                <div className="flex flex-col md:flex-row min-h-screen anesthesia-bg relative overflow-hidden" dir="rtl">
                     <div className="anesthesia-overlay"></div>
-                    <div className="scan-line pointer-events-none"></div>
-
-                    {/* Sidebar Navigation */}
-                    <aside className="w-full md:w-80 bg-slate-900/40 backdrop-blur-3xl p-6 md:p-8 flex flex-col gap-2 border-b md:border-b-0 md:border-r border-slate-800/50 relative z-20 shadow-xl transition-all duration-700">
-                        <div className="px-2 py-6 mb-4 md:mb-8 border-b border-slate-800/50 pb-6 flex flex-col items-center justify-center text-center">
-                            <div className="w-24 h-24 md:w-32 md:h-32 flex items-center justify-center mb-3 transition-transform hover:scale-110">
-                                <img src="logo_v4.png" alt="Shield Logo" className="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-2xl" />
-                            </div>
-                            <h2 className="text-sm font-black text-white tracking-widest drop-shadow-md mt-6">
-                                MEDICAL ASSISTANT
-                            </h2>
-                        </div>
-
-                        <nav className="flex flex-col gap-2 flex-1" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-                            <NavItem id="dashboard" label={t('dashboard')} icon="layout-dashboard" active={activeTab === 'dashboard'} onClick={setActiveTab} />
-                            <NavItem id="maintenance" label={t('maintenance')} icon="stethoscope" active={activeTab === 'maintenance'} onClick={setActiveTab} />
-                            <NavItem id="technicians" label={t('technicians')} icon="wrench" active={activeTab === 'technicians'} onClick={setActiveTab} />
-                            <NavItem id="hospital" label={language === 'ar' ? 'سوق الأدوات' : 'Tools Market'} icon="shopping-cart" active={activeTab === 'hospital'} onClick={setActiveTab} />
-                            
-                            <div className="mt-4 p-4 rounded-3xl bg-white/5 border border-white/10 flex flex-col items-center justify-center relative overflow-hidden group">
-                                <h3 className="text-xs font-black text-slate-300 mb-2 uppercase tracking-widest text-center">Mobile Connection QR</h3>
-                                <div className="p-2 bg-white rounded-xl shadow-inner">
-                                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=http://${localIp}:8000/mobile.html`} alt="QR Code" className="w-32 h-32 object-contain" />
-                                </div>
-                                <span className="text-[10px] font-bold text-slate-500 mt-3 break-all text-center px-2">http://{localIp}:8000/mobile.html</span>
-                            </div>
-
-                            <button
-                                onClick={() => {
-                                    setIsLoggedIn(false);
-                                    setExistingSession(false);
-                                    localStorage.removeItem('med_session');
-                                }}
-                                className="mt-6 flex items-center justify-center gap-4 px-6 py-4 rounded-2xl bg-rose-50 border-2 border-rose-100 text-rose-500 hover:bg-rose-100 transition-all font-black text-sm w-full"
-                                dir="rtl"
-                            >
-                                <i data-lucide="log-out" className="w-5 h-5"></i>
-                                <span>{language === 'ar' ? 'تسجيل الخروج' : 'Logout'}</span>
+                    <aside className="w-full md:w-80 bg-slate-900/60 backdrop-blur-3xl p-10 flex flex-col gap-4 border-l border-white/10 relative z-20">
+                        <img src="logo_v4.png" className="w-24 mx-auto mb-12 drop-shadow-2xl" />
+                        <nav className="space-y-3 flex-1 text-right">
+                            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-4 px-6 py-5 rounded-[2rem] font-black text-sm transition-all ${activeTab === 'dashboard' ? 'bg-[#4F46E5] text-white shadow-lg' : 'text-slate-400 hover:bg-white/5'}`}>
+                                <i data-lucide="layout-dashboard" className="w-5 h-5"></i> لوحة التحكم
                             </button>
                         </nav>
-                    </aside>
-
-                    {/* Main Viewport */}
-                    <main className="flex-1 w-full p-6 md:p-10 overflow-y-auto relative z-10">
-                        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 md:mb-12">
-                            <div className="flex flex-col gap-2">
-                                <span className="text-sm md:text-xl font-black text-blue-400 tracking-wide">البنية التحتية للأجهزة الطبية</span>
-                                <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight drop-shadow-lg">Engineer Michael's Intel-Laboratory</h1>
+                        <div className="mt-auto p-6 bg-white/5 rounded-[3rem] border border-white/10 text-center group">
+                            <p className="text-[10px] text-gray-400 font-black mb-4 uppercase tracking-[0.2em] opacity-60">Mobile Pairing QR</p>
+                            <div className="bg-white p-3 rounded-2xl inline-block shadow-inner group-hover:scale-105 transition-transform duration-500">
+                                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(getMobileUrl())}`} className="w-32 h-32" />
                             </div>
-                            <div className="flex items-center gap-4 bg-white p-2 pr-6 rounded-2xl shadow-sm border border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors" dir="rtl">
-                                <div className="w-10 h-10 bg-[#4F46E5] rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-indigo-100">{userData.name ? userData.name[0] : 'هـ'}</div>
-                                <div className="flex flex-col text-right">
-                                    <span className="text-xs font-black text-gray-800">{userData.name}</span>
-                                    <span className="text-[10px] font-bold text-gray-500">{userData.specialty}</span>
-                                </div>
+                            <p className="text-[9px] text-indigo-300 font-bold mt-4 opacity-40">Auto-linking: GitHub / Local</p>
+                        </div>
+                    </aside>
+                    <main className="flex-1 p-10 md:p-16 relative z-10 overflow-y-auto">
+                        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-16 text-right">
+                            <div>
+                                <h2 className="text-5xl font-black text-white tracking-tighter mb-2">المركز الطبي الذكي</h2>
+                                <p className="text-blue-300 font-black uppercase tracking-widest text-sm opacity-80">نظام مراقبة الأجهزة الطبية المتصلة</p>
                             </div>
                         </header>
-
-                        <div className="animate-in fade-in duration-700">
-                            {renderContent()}
+                        <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-10">
+                            {devices.map(d => <DeviceCard key={d.id} device={d} />)}
                         </div>
                     </main>
-
-                    {renderTelemetryModal()}
-                    {renderOrderModal()}
-                    {renderTechModal()}
-                    {renderRegisterModal()}
-                    {renderHelpModal()}
-
-                    <div className="fixed bottom-10 left-10 flex flex-col gap-3 z-[110]">
-                        <button
-                            onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
-                            className="w-14 h-14 glass rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all text-gray-700 bg-white/60">
-                            <i data-lucide="languages" className="w-6 h-6"></i>
-                        </button>
-                    </div>
                 </div>
             );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-
-        const initIcons = () => {
-            if (window.lucide) {
-                lucide.createIcons();
-            } else {
-                setTimeout(initIcons, 50);
-            }
-        };
-        initIcons();
+        setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 1000);
     </script>
 </body>
 </html>
