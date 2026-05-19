@@ -20,7 +20,7 @@ def list_notifications(receiver_type: str = None, db: Session = Depends(database
 def mark_read(notif_id: int, db: Session = Depends(database.get_db)):
     notif = db.query(models.Notification).filter(models.Notification.id == notif_id).first()
     if not notif:
-        raise HTTPException(status_code=404, detail="Notification not found")
+        raise HTTPException(status_code=404, detail="لم يتم العثور على الإشعار")
     notif.is_read = True
     db.commit()
-    return {"status": "success"}
+    return {"status": "نجاح"}

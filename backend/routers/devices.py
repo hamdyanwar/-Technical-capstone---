@@ -25,12 +25,12 @@ def list_devices(skip: int = 0, limit: int = 100, db: Session = Depends(database
         else:
             dev.health = {
                 "health_score": 100,
-                "status": "Active",
+                "status": "نشط",
                 "is_healthy": True,
                 "malfunction_probability": 0.0,
                 "issues": [],
                 "insights": [],
-                "prediction": "System Stable",
+                "prediction": "النظام مستقر",
                 "gas_level": 35.0,
                 "pressure": 32.0,
                 "soda_lime": 100.0
@@ -59,7 +59,7 @@ def create_device(device: schemas.DeviceCreate, db: Session = Depends(database.g
     arrival_notif = models.Notification(
         device_id=db_device.id,
         receiver_type="Technician",
-        message=f"New device {db_device.name} has arrived and registered at {db_device.location}."
+        message=f"تم تسجيل وصول جهاز جديد {db_device.name} في {db_device.location}."
     )
     db.add(arrival_notif)
     db.commit()
@@ -85,7 +85,8 @@ def add_telemetry(device_id: int, telemetry: schemas.TelemetryCreate, db: Sessio
         pressure=telemetry.pressure,
         flow_rate=telemetry.flow_rate,
         gas_level=telemetry.gas_level,
-        battery_level=telemetry.battery_level
+        battery_level=telemetry.battery_level,
+        soda_lime=telemetry.soda_lime
     )
     db.add(db_telemetry)
     db.commit()

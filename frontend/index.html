@@ -11,6 +11,7 @@
     <script src="lib/tailwindcss.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="lib/lucide.js"></script>
+    <script src="translations.js"></script>
 
     <script src="lib/chart.js"></script>
     <style>
@@ -274,11 +275,25 @@
         };
 
         const DeviceCard = ({ device, health, onUpdate, language }) => {
-            const history = device.history || [];
-            const sodaHistory = device.soda_history || [];
+            const history = device.history && device.history.length > 0
+                ? device.history
+                : (device.telemetry && device.telemetry.length > 0
+                    ? [...device.telemetry].reverse().map(t => t.pressure)
+                    : []);
 
-            const gasValue = device.health?.pressure || (history.length > 0 ? history[history.length - 1] : null);
-            const sodaValue = device.health?.soda_lime || (sodaHistory.length > 0 ? sodaHistory[sodaHistory.length - 1] : null);
+            const sodaHistory = device.soda_history && device.soda_history.length > 0
+                ? device.soda_history
+                : (device.telemetry && device.telemetry.length > 0
+                    ? [...device.telemetry].reverse().map(t => t.soda_lime)
+                    : []);
+
+            const gasValue = device.health?.pressure !== undefined && device.health?.pressure !== null
+                ? device.health.pressure
+                : (history.length > 0 ? history[history.length - 1] : null);
+
+            const sodaValue = device.health?.soda_lime !== undefined && device.health?.soda_lime !== null
+                ? device.health.soda_lime
+                : (sodaHistory.length > 0 ? sodaHistory[sodaHistory.length - 1] : null);
 
             // AI Processing - Gas
             const smoothData = React.useMemo(() => rollingAverage(history, 5), [history]);
@@ -621,7 +636,22 @@
             const [showProfileDropdown, setShowProfileDropdown] = useState(false);
             const [devices, setDevices] = useState([]);
             const [notifications, setNotifications] = useState([]);
-            const [technicians, setTechnicians] = useState([]);
+            const [technicians, setTechnicians] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('medguard_technicians');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (e) {
+                    return [];
+                }
+            });
+
+            React.useEffect(() => {
+                if (technicians && technicians.length > 0) {
+                    try {
+                        localStorage.setItem('medguard_technicians', JSON.stringify(technicians));
+                    } catch (e) { }
+                }
+            }, [technicians]);
             const [chatMessages, setChatMessages] = useState([]);
             const [input, setInput] = useState('');
             const [lastInterruptId, setLastInterruptId] = useState(null);
@@ -634,6 +664,9 @@
 
             const [showRegisterModal, setShowRegisterModal] = useState(false);
             const [showTechModal, setShowTechModal] = useState(false);
+            const [showAddTechModal, setShowAddTechModal] = useState(false);
+            const [selectedTech, setSelectedTech] = useState(null);
+            const [newTechData, setNewTechData] = useState({ name: '', phone: '', location: '', price: '' });
             const [showTelemetryModal, setShowTelemetryModal] = useState(false);
             const [updateType, setUpdateType] = useState('gas');
             const [selectedDevice, setSelectedDevice] = useState(null);
@@ -641,188 +674,22 @@
             const [newDeviceData, setNewDeviceData] = useState({ name: '', location: '', type: 'Anesthesia Machine', installDate: new Date().toISOString().split('T')[0], registerTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) });
             const [loginTime, setLoginTime] = useState('');
 
-            const [language, setLanguage] = useState('ar');
+            const [language, setLanguage] = useState(localStorage.getItem('app_lang') || 'ar');
             const [showLangDropdown, setShowLangDropdown] = useState(false);
 
-            const translations = {
-                ar: {
-                    system_name: "MEDICAL ASSISTANT",
-                    engineer_name: "الخاص بالمهندس مايكل",
-                    dashboard: "لوحة التحكم",
-                    maintenance: "مركز الأطباء",
-                    technicians: "مركز الفنيين",
-                    hospital: "عمليات المستشفى",
-                    protocol_health: "مؤشر سلامة البروتوكول",
-                    online_intel: "الاستخبارات عبر الإنترنت",
-                    reg_device: "إضافة جهاز جديد",
-                    role: "كبير مهندسي الأنظمة",
-                },
-                en: {
-                    system_name: "MEDICAL ASSISTANT",
-                    engineer_name: "Engineer Michael's Edition",
-                    dashboard: "Dashboard",
-                    maintenance: "Doctor Center",
-                    technicians: "Technician Hub",
-                    hospital: "Hospital Ops",
-                    protocol_health: "Protocol Health Index",
-                    online_intel: "Online Intelligence",
-                    reg_device: "Register New Device",
-                    role: "Senior Systems Engineer",
-                },
-                fr: {
-                    system_name: "Système Medical",
-                    engineer_name: "Édition Ingénieur Michael",
-                    dashboard: "Tableau de Bord",
-                    maintenance: "Centre Médical",
-                    technicians: "Centre Tech",
-                    hospital: "Opérations Hôpital",
-                    protocol_health: "Indice Santé Protocole",
-                    online_intel: "Intelligence en Ligne",
-                    reg_device: "Enregistrer l'appareil",
-                    role: "Ingénieur Systèmes Sénior",
-                },
-                it: {
-                    system_name: "Sistema Medical",
-                    engineer_name: "Edizione Ing. Michael",
-                    dashboard: "Cruscotto",
-                    maintenance: "Centro Medico",
-                    technicians: "Centro Tecnico",
-                    hospital: "Operazioni Ospedale",
-                    protocol_health: "Indice Salute Protocollo",
-                    online_intel: "Intelligenza Online",
-                    reg_device: "Registra Dispositivo",
-                    role: "Ingegnere Sistemi Senior",
-                },
-                ja: {
-                    system_name: "Medical システム",
-                    engineer_name: "マイケル・エンジニア版",
-                    dashboard: "ダッシュボード",
-                    maintenance: "ドクターセンター",
-                    technicians: "技術センター",
-                    hospital: "病院運営",
-                    protocol_health: "プロトコル健康指数",
-                    online_intel: "オンラインインテリジェンス",
-                    reg_device: "新規デバイス登録",
-                    role: "シニアシステムエンジニア",
-                },
-                zh: {
-                    system_name: "Medical 系统",
-                    engineer_name: "迈克尔工程师版",
-                    dashboard: "仪表板",
-                    maintenance: "医生中心",
-                    technicians: "技术中心",
-                    hospital: "医院运营",
-                    protocol_health: "协议健康指数",
-                    online_intel: "在线情报",
-                    reg_device: "注册新设备",
-                    role: "高级系统工程师",
-                },
-                ru: {
-                    system_name: "Система Medical",
-                    engineer_name: "Версия инженеера Майкла",
-                    dashboard: "Панель управления",
-                    maintenance: "Центр врачей",
-                    technicians: "Технический центр",
-                    hospital: "Операции больницы",
-                    protocol_health: "Индекс здоровья протокола",
-                    online_intel: "Онлайн-разведка",
-                    reg_device: "Регистрация устройства",
-                    role: "Старший системный инженер",
-                },
-                el: {
-                    system_name: "Σύστημα Medical",
-                    engineer_name: "Έκδοση Μηχανικού Michael",
-                    dashboard: "Πίνακας Ελέγχου",
-                    maintenance: "Κέντρο Γιατρών",
-                    technicians: "Τεχνικό Κέντρο",
-                    hospital: "Λειτουργίες Νοσοκομείου",
-                    infrastructure: "Ιατρική Υποδομή",
-                    protocol_health: "Δείκτης Υγείας Πρωτοκόλλου",
-                    online_intel: "Online Νοημοσύνη",
-                    reg_device: "Εγγραφή Νέας Συσκευής",
-                    role: "Ανώτερος Μηχανικός Συστημάτων",
-                },
-                es: {
-                    system_name: "Sistema Medical",
-                    engineer_name: "Edición Ing. Michael",
-                    dashboard: "Panel de Control",
-                    maintenance: "Centro Médico",
-                    technicians: "Centro Técnico",
-                    hospital: "Operaciones Hosp.",
-                    infrastructure: "Infraestructura Médica",
-                    protocol_health: "Salud del Protocolo",
-                    online_intel: "Inteligencia Online",
-                    reg_device: "Registrar Dispositivo",
-                    role: "Ingeniero de Sistemas Sr.",
-                },
-                de: {
-                    system_name: "Medical System",
-                    engineer_name: "Ing. Michael Edition",
-                    dashboard: "Dashboard",
-                    maintenance: "Ärztezentrum",
-                    technicians: "Technisches Zentrum",
-                    hospital: "Krankenhausbetrieb",
-                    infrastructure: "Med. Infrastruktur",
-                    protocol_health: "Protokoll-Integrität",
-                    online_intel: "Online-Intelligenz",
-                    reg_device: "Gerät Registrieren",
-                    role: "Leitender Systemingenieur",
-                },
-                pt: {
-                    system_name: "Sistema Medical",
-                    engineer_name: "Edição Eng. Michael",
-                    dashboard: "Painel de Controle",
-                    maintenance: "Centro Médico",
-                    technicians: "Centro Técnico",
-                    hospital: "Operações Hospit.",
-                    infrastructure: "Infraestrutura Médica",
-                    protocol_health: "Saúde do Protocolo",
-                    online_intel: "Inteligência Online",
-                    reg_device: "Registrar Aparelho",
-                    role: "Engenheiro de Sistemas Sênior",
-                },
-                hi: {
-                    system_name: "Medical प्रणाली",
-                    engineer_name: "इंजीनियर माइकल संस्करण",
-                    dashboard: "डैशबोर्ड",
-                    maintenance: "डॉक्टर केंद्र",
-                    technicians: "तकनीकी केंद्र",
-                    hospital: "अस्पताल संचालन",
-                    infrastructure: "चिकित्सा बुनियादी ढांचा",
-                    protocol_health: "प्रोटोकॉल स्वास्थ्य सूचकांक",
-                    online_intel: "ऑनलाइन इंटेलिजेंस",
-                    reg_device: "नया उपकरण पंजीकृत करें",
-                    role: "वरिष्ठ सिस्टम इंजीनियर",
-                },
-                tr: {
-                    system_name: "Medical Sistemi",
-                    engineer_name: "Mühendis Michael Sürümü",
-                    dashboard: "Kontrol Paneli",
-                    maintenance: "Doktor Merkezi",
-                    technicians: "Teknik Merkez",
-                    hospital: "Hastane Operasyonu",
-                    infrastructure: "Tıbbi Altyapı",
-                    protocol_health: "Protokol Sağlık Endeksi",
-                    online_intel: "Çevrimiçi Zeka",
-                    reg_device: "Cihaz Kaydet",
-                    role: "Kıdemli Sistem Mühendisi",
-                },
-                'es-AR': {
-                    system_name: "Sistema Medical",
-                    engineer_name: "Edición Ing. Michael",
-                    dashboard: "Panel de Control",
-                    maintenance: "Centro Médico",
-                    technicians: "Centro Técnico",
-                    hospital: "Operaciones Hosp.",
-                    infrastructure: "Infraestructura Médica",
-                    protocol_health: "Salud del Protocolo",
-                    online_intel: "Inteligencia Online",
-                    reg_device: "Registrar Dispositivo",
-                    role: "Ingeniero de Sistemas Sr.",
+            React.useEffect(() => {
+                localStorage.setItem('app_lang', language);
+                document.documentElement.lang = language;
+                document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+            }, [language]);
+
+            const t = (key) => {
+                if (window.t) {
+                    return window.t(key, language);
                 }
+                return key;
             };
 
-            const t = (key) => translations[language][key] || key;
             const [techSearch, setTechSearch] = useState('');
             const [isLoggedIn, setIsLoggedIn] = useState(false);
             const [loginData, setLoginData] = useState({ name: '', role: '', hospitalCode: '', hospitalName: '' });
@@ -849,24 +716,24 @@
                 const hospitalVal = loginData.hospitalName.trim();
 
                 if (!nameVal) {
-                    newErrors.name = 'الاسم مطلوب';
+                    newErrors.name = t('الاسم مطلوب');
                 } else if (!/^[\u0600-\u06FFa-zA-Z\s'.]+$/.test(nameVal)) {
-                    newErrors.name = 'يجب أن يحتوي على حروف فقط';
+                    newErrors.name = t('يجب أن يحتوي على حروف فقط');
                 } else if (nameVal.length < 3) {
-                    newErrors.name = 'الاسم قصير جداً';
+                    newErrors.name = t('الاسم قصير جداً');
                 }
                 if (!loginData.role) {
-                    newErrors.role = 'اختر وظيفتك من القائمة';
+                    newErrors.role = t('اختر وظيفتك من القائمة');
                 }
                 if (!/^\d{3}$/.test(loginData.hospitalCode.trim())) {
-                    newErrors.hospitalCode = 'يجب أن يكون 3 أرقام';
+                    newErrors.hospitalCode = t('يجب أن يكون 3 أرقام');
                 }
                 if (!hospitalVal) {
-                    newErrors.hospitalName = 'اسم المستشفى مطلوب';
+                    newErrors.hospitalName = t('اسم المستشفى مطلوب');
                 } else if (!/^[\u0600-\u06FFa-zA-Z\s\-]+$/.test(hospitalVal)) {
-                    newErrors.hospitalName = 'يجب أن يحتوي على حروف فقط';
+                    newErrors.hospitalName = t('يجب أن يحتوي على حروف فقط');
                 } else if (hospitalVal.length < 4) {
-                    newErrors.hospitalName = 'الاسم قصير جداً';
+                    newErrors.hospitalName = t('الاسم قصير جداً');
                 }
 
                 if (Object.keys(newErrors).length > 0) {
@@ -878,6 +745,19 @@
                 setExistingSession(session);
                 setUserData({ name: loginData.name, phone: '', specialty: loginData.role });
                 setLoginTime(new Date().toLocaleTimeString(language === 'ar' ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' }));
+                
+                const welcomeMsg = language === 'ar'
+                    ? `تم تسجيل الدخول بنجاح | الاسم: ${loginData.name} | الوظيفة: ${t(loginData.role)} | المستشفى: ${loginData.hospitalName} | الكود: ${window.formatNumber ? window.formatNumber(loginData.hospitalCode, language) : loginData.hospitalCode}`
+                    : `Login successful | Name: ${loginData.name} | Role: ${t(loginData.role)} | Hospital: ${loginData.hospitalName} | Code: ${window.formatNumber ? window.formatNumber(loginData.hospitalCode, language) : loginData.hospitalCode}`;
+                
+                setNotifications(prev => [{
+                    id: Date.now(),
+                    message: welcomeMsg,
+                    timestamp: new Date().toISOString(),
+                    receiver_type: 'Doctor',
+                    severity: 'info',
+                    is_read: false
+                }, ...prev]);
                 setIsLoggedIn(true);
                 setErrors({});
             };
@@ -915,15 +795,14 @@
             };
 
             const renderSessionChoice = () => (
-                <div className="anesthesia-bg min-h-screen flex items-center justify-center p-8 relative" dir="rtl">
+                <div className="anesthesia-bg min-h-screen flex items-center justify-center p-8 relative" dir={language === 'ar' ? 'rtl' : 'ltr'}>
                     <div className="anesthesia-overlay"></div>
                     <div className="w-full max-w-lg relative z-10">
                         <div className="text-center mb-12">
                             <div className="w-20 h-20 bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl">
                                 <img src="logo_v4.png" alt="Logo" className="w-14 h-14 object-contain drop-shadow-lg" />
                             </div>
-                            <h1 className="text-4xl font-black text-gray-900 drop-shadow-sm mb-2">مرحباً بعودتك</h1>
-                            <p className="text-sm font-bold text-[#4F46E5] uppercase tracking-widest">تم العثور على جلسة نشطة باسم {existingSession.name}</p>
+                            <h1 className="text-4xl font-black text-gray-900 drop-shadow-sm mb-2">{t("Welcome Back")}</h1>
                         </div>
 
                         <div className="bg-white/90 backdrop-blur-3xl rounded-[3rem] border border-gray-100 shadow-[0_20px_60px_rgba(79,70,229,0.1)] p-10 space-y-6">
@@ -931,14 +810,14 @@
                                 onClick={handleContinueSession}
                                 className="w-full py-6 bg-[#4F46E5] hover:bg-indigo-600 text-white rounded-2xl font-black text-lg shadow-2xl shadow-indigo-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
                                 <i data-lucide="play" className="w-6 h-6"></i>
-                                {language === 'ar' ? 'استكمال بي الحساب القديم' : 'Continue'}
+                                {t("استكمال بي الحساب القديم")}
                             </button>
 
                             <button
                                 onClick={handleClearSession}
                                 className="w-full py-5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-2xl font-black text-sm border border-rose-100 transition-all flex items-center justify-center gap-3">
                                 <i data-lucide="log-out" className="w-5 h-5"></i>
-                                تسجيل الخروج وبدء جلسة جديدة
+                                {t("تسجيل الخروج وبدء جلسة جديدة")}
                             </button>
                         </div>
                     </div>
@@ -960,30 +839,30 @@
                 ) : null;
 
                 return (
-                    <div className="anesthesia-bg min-h-screen flex items-center justify-center p-8 relative" dir="rtl">
+                    <div className="anesthesia-bg min-h-screen flex items-center justify-center p-8 relative" dir={language === 'ar' ? 'rtl' : 'ltr'}>
                         <div className="anesthesia-overlay"></div>
                         <div className="w-full max-w-lg relative z-10">
                             <div className="text-center mb-12">
                                 <div className="w-48 h-48 flex items-center justify-center mx-auto mb-2">
                                     <img src="logo_v4.png" alt="Logo" className="w-full h-full object-contain" />
                                 </div>
-                                <h1 className="text-4xl font-black text-gray-900 drop-shadow-md mb-4 tracking-tighter mt-2">MEDICAL ASSISTANT</h1>
+                                <h1 className="text-4xl font-black text-gray-900 drop-shadow-md mb-4 tracking-tighter mt-2">{t("system_name")}</h1>
                             </div>
 
                             <div className="bg-white/90 backdrop-blur-3xl rounded-[3rem] border border-gray-100 shadow-[0_20px_60px_rgba(79,70,229,0.1)] p-10">
-                                <h2 className="text-xl font-black text-gray-900 mb-2">تسجيل الدخول</h2>
-                                <p className="text-gray-500 text-xs font-bold mb-8">أدخل بياناتك للوصول إلى لوحة التحكم</p>
+                                <h2 className="text-xl font-black text-gray-900 mb-2">{t("تسجيل الدخول")}</h2>
+                                <p className="text-gray-500 text-xs font-bold mb-8">{t("أدخل بياناتك للوصول إلى لوحة التحكم")}</p>
 
                                 <div className="space-y-5">
 
                                     {/* Name */}
                                     <div>
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">الاسم كاملاً</label>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("الاسم كاملاً")}</label>
                                         <div className={`flex items-center gap-3 border rounded-2xl px-5 py-4 transition-all duration-300 ${fieldBorder('name')}`}>
                                             <i data-lucide="user" className={`w-4 h-4 shrink-0 ${err.name ? 'text-rose-400' : 'text-gray-400'}`}></i>
                                             <input
                                                 type="text"
-                                                placeholder="مثال: م. أحمد محمد"
+                                                placeholder={t("مثال: م. أحمد محمد")}
                                                 value={loginData.name}
                                                 onChange={e => { setLoginData({ ...loginData, name: e.target.value }); setErrors({ ...errors, name: '' }); }}
                                                 className="bg-transparent text-gray-800 placeholder-gray-300 text-sm font-bold w-full outline-none"
@@ -994,7 +873,7 @@
 
                                     {/* Job Role - Dropdown */}
                                     <div>
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">الوظيفة / التخصص</label>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("الوظيفة / التخصص")}</label>
                                         <div className={`flex items-center gap-3 border rounded-2xl px-5 py-4 transition-all duration-300 ${fieldBorder('role')}`}>
                                             <i data-lucide="stethoscope" className={`w-4 h-4 shrink-0 ${err.role ? 'text-rose-400' : 'text-gray-400'}`}></i>
                                             <select
@@ -1002,9 +881,9 @@
                                                 onChange={e => { setLoginData({ ...loginData, role: e.target.value }); setErrors({ ...errors, role: '' }); }}
                                                 className="bg-transparent text-sm font-bold w-full outline-none cursor-pointer appearance-none text-gray-800"
                                             >
-                                                <option value="" disabled style={{ background: 'white', color: '#94a3b8' }}>اختر وظيفتك...</option>
+                                                <option value="" disabled style={{ background: 'white', color: '#94a3b8' }}>{t("اختر وظيفتك...")}</option>
                                                 {jobRoles.map(r => (
-                                                    <option key={r} value={r} style={{ background: 'white', color: '#1e293b' }}>{r}</option>
+                                                    <option key={r} value={r} style={{ background: 'white', color: '#1e293b' }}>{t(r)}</option>
                                                 ))}
                                             </select>
                                             <i data-lucide="chevron-down" className="w-4 h-4 text-gray-400 shrink-0"></i>
@@ -1015,12 +894,12 @@
                                     {/* Hospital Code + Name */}
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">كود المستشفى (3 أرقام)</label>
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("كود المستشفى (3 أرقام)")}</label>
                                             <div className={`flex items-center gap-3 border rounded-2xl px-5 py-4 transition-all duration-300 ${fieldBorder('hospitalCode')}`}>
                                                 <i data-lucide="hash" className={`w-4 h-4 shrink-0 ${err.hospitalCode ? 'text-rose-400' : 'text-gray-400'}`}></i>
                                                 <input
                                                     type="text"
-                                                    placeholder="مثال: 401"
+                                                    placeholder={t("مثال: 401")}
                                                     maxLength={3}
                                                     value={loginData.hospitalCode}
                                                     onChange={e => { setLoginData({ ...loginData, hospitalCode: e.target.value.replace(/\D/g, '') }); setErrors({ ...errors, hospitalCode: '' }); }}
@@ -1030,12 +909,12 @@
                                             <FieldError name="hospitalCode" />
                                         </div>
                                         <div>
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">اسم المستشفى</label>
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("اسم المستشفى")}</label>
                                             <div className={`flex items-center gap-3 border rounded-2xl px-5 py-4 transition-all duration-300 ${fieldBorder('hospitalName')}`}>
                                                 <i data-lucide="hospital" className={`w-4 h-4 shrink-0 ${err.hospitalName ? 'text-rose-400' : 'text-gray-400'}`}></i>
                                                 <input
                                                     type="text"
-                                                    placeholder="مثال: مستشفى القاهرة"
+                                                    placeholder={t("مثال: مستشفى القاهرة")}
                                                     value={loginData.hospitalName}
                                                     onChange={e => { setLoginData({ ...loginData, hospitalName: e.target.value }); setErrors({ ...errors, hospitalName: '' }); }}
                                                     className="bg-transparent text-gray-800 placeholder-gray-300 text-sm font-bold w-full outline-none"
@@ -1051,7 +930,7 @@
                                         translate="no"
                                         className="w-full py-5 bg-[#4F46E5] hover:bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-2xl shadow-indigo-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 mt-2">
                                         <i data-lucide="log-in" className="w-5 h-5"></i>
-                                        {language === 'ar' ? 'تم' : 'Login'}
+                                        {t("تسجيل الدخول")}
                                     </button>
                                 </div>
                             </div>
@@ -1063,9 +942,9 @@
             };
 
             const filteredTechnicians = technicians.filter(t =>
-                t.name.toLowerCase().includes(techSearch.toLowerCase()) ||
-                t.location.toLowerCase().includes(techSearch.toLowerCase()) ||
-                t.specialty.toLowerCase().includes(techSearch.toLowerCase())
+                (t.name || '').toLowerCase().includes(techSearch.toLowerCase()) ||
+                (t.location || '').toLowerCase().includes(techSearch.toLowerCase()) ||
+                (t.specialty || '').toLowerCase().includes(techSearch.toLowerCase())
             );
 
 
@@ -1079,7 +958,7 @@
 
                 const installDate = new Date(newDeviceData.installDate);
                 const nextCheckDate = new Date(installDate);
-                nextCheckDate.setMonth(nextCheckDate.getMonth() + 2);
+                nextCheckDate.setMonth(nextCheckDate.getMonth() + 3);
                 const nextCheckStr = nextCheckDate.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US');
 
                 const successMsg = language === 'ar' 
@@ -1145,6 +1024,70 @@
                 }
             };
 
+            const handleRegisterTech = async () => {
+                if (!newTechData.name.trim()) {
+                    alert(language === 'ar' ? "يرجى إدخال اسم الفني." : "Please enter technician name.");
+                    return;
+                }
+                if (!newTechData.phone.trim()) {
+                    alert(language === 'ar' ? "يرجى إدخال رقم هاتف الفني." : "Please enter technician phone number.");
+                    return;
+                }
+                if (!newTechData.price.trim()) {
+                    alert(language === 'ar' ? "يرجى إدخال سعر خدمة الفني." : "Please enter technician service price.");
+                    return;
+                }
+
+                const successMsg = language === 'ar' 
+                    ? `تم تسجيل الفني ${newTechData.name} بنجاح!`
+                    : `Technician ${newTechData.name} successfully registered!`;
+
+                try {
+                    const response = await fetch('http://localhost:8000/technicians/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: newTechData.name,
+                            location: newTechData.phone + "|||" + newTechData.location,
+                            price_per_hour: newTechData.price,
+                            specialty: newTechData.specialty || 'أجهزة طبية',
+                            rating: 5.0
+                        })
+                    });
+                    if (response.ok) {
+                        setShowAddTechModal(false);
+                        fetchData();
+                        setNotifications(prev => [{
+                            id: Date.now(),
+                            message: successMsg,
+                            timestamp: new Date().toISOString(),
+                            receiver_type: 'Doctor',
+                            is_read: false
+                        }, ...prev]);
+                        setNewTechData({ name: '', phone: '', location: '', price: '', specialty: 'أجهزة طبية' });
+                    }
+                } catch (err) {
+                    // Local fallback
+                    setTechnicians(prev => [...prev, {
+                        id: Date.now(),
+                        name: newTechData.name,
+                        location: newTechData.phone + "|||" + newTechData.location,
+                        price_per_hour: newTechData.price,
+                        specialty: newTechData.specialty || 'أجهزة طبية',
+                        rating: 5.0
+                    }]);
+                    setNotifications(prev => [{
+                        id: Date.now(),
+                        message: successMsg,
+                        timestamp: new Date().toISOString(),
+                        receiver_type: 'Doctor',
+                        is_read: false
+                    }, ...prev]);
+                    setShowAddTechModal(false);
+                    setNewTechData({ name: '', phone: '', location: '', price: '', specialty: 'أجهزة طبية' });
+                }
+            };
+
 
 
 
@@ -1162,11 +1105,21 @@
                     const notifData = await notifRes.json();
 
                     setDevices(devData);
-                    setTechnicians(techData);
+                    const dummyNames = ["Ahmed Mansour", "Sarah Williams", "م. أحمد منصور", "م. سارة ويليامز", "فريق الدعم المناوب"];
+                    const nonDummyTechs = techData.filter(t => !dummyNames.includes(t.name));
+                    setTechnicians(prev => {
+                        const merged = [...nonDummyTechs];
+                        (prev || []).forEach(p => {
+                            if (p.id > 1000000000000 && !merged.some(m => m.name === p.name)) {
+                                merged.push(p);
+                            }
+                        });
+                        return merged;
+                    });
                     // Only update notifications if backend actually has data, otherwise keep local ones
                     if (notifData && notifData.length > 0) {
                         setNotifications(prev => {
-                            const combined = [...notifData, ...prev.filter(p => p.id > 2000000000000)]; // Keep recent local ones
+                            const combined = [...notifData, ...prev.filter(p => p.id > 1000000000000)]; // Keep recent local ones
                             return combined.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 50);
                         });
                     }
@@ -1191,10 +1144,15 @@
                             { id: 2, message: "ICU-2: Oxygen supply pressure at 26 PSI.", receiver_type: "Doctor", timestamp: new Date().toISOString(), is_read: true }
                         ];
                     });
-                    setTechnicians([
-                        { name: "Ahmed Mansour", location: "Cairo", price: "200 EGP/hr", rating: 4.9, specialty: "Imaging" },
-                        { name: "Sarah Williams", location: "Maadi", price: "350 EGP/hr", rating: 4.8, specialty: "Anesthesia" }
-                    ]);
+                    setTechnicians(prev => {
+                        if (prev && prev.length > 0) return prev;
+                        try {
+                            const saved = localStorage.getItem('medguard_technicians');
+                            return saved ? JSON.parse(saved) : [];
+                        } catch (e) {
+                            return [];
+                        }
+                    });
                 }
             };
 
@@ -1320,8 +1278,8 @@
 
 
             const handleOrderSubmit = () => {
-                // Mock submission
-                alert(`Order placed successfully!\nEquipment: ${orderData.equipment}\nDepartment: ${orderData.department}\nPriority: ${orderData.priority}`);
+                const priorityAr = orderData.priority === 'Emergency' ? 'طوارئ' : orderData.priority === 'Urgent' ? 'عاجل' : 'عادي';
+                alert(`تم إرسال الطلب بنجاح!\nالمعدة: ${orderData.equipment}\nالقسم: ${orderData.department}\nالأولوية: ${priorityAr}`);
                 setShowOrderModal(false);
                 setOrderStep(1);
                 setOrderData({ equipment: '', department: '', priority: 'Normal' });
@@ -1330,20 +1288,35 @@
             const handleTelemetrySubmit = async () => {
                 if (!selectedDevice) return;
 
-                const val = parseFloat(newTelemetry[updateType === 'gas' ? 'pressure' : (updateType === 'soda' ? 'gas_level' : (updateType === 'flow' ? 'flow_rate' : 'battery_level'))]);
+                // Fix field names to match backend schema: gas_level and pressure (for soda lime)
+                const inputField = updateType === 'gas' ? 'pressure' : 'gas_level'; // using what was bound in the UI
+                const val = parseFloat(newTelemetry[inputField]);
                 if (isNaN(val)) return;
 
-                // 1. Close modal immediately to show the dashboard
-                setShowTelemetryModal(false);
+                // Send to backend so Hardware Bridge can read it!
+                try {
+                    const payload = {
+                        gas_level: updateType === 'gas' ? val : (selectedDevice.health?.gas_level || 100),
+                        pressure: updateType === 'gas' ? val : (selectedDevice.health?.pressure || 100),
+                        soda_lime: updateType === 'soda' ? val : (selectedDevice.health?.soda_lime || 100),
+                        flow_rate: selectedDevice.health?.flow_rate || 5.0,
+                        battery_level: selectedDevice.health?.battery_level || 100.0
+                    };
+                    await fetch(`http://localhost:8000/devices/${selectedDevice.id}/telemetry`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } catch (e) {
+                    console.error("Backend sync failed", e);
+                }
 
-                // 2. Small delay to let the user focus on the dashboard card
+                setShowTelemetryModal(false);
                 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
                 await sleep(500);
 
-                // Beep logic based on type - now triggered below 45 as requested
                 const isCritical = val < 45;
-
-                if (isCritical) {
+                const playBeep = () => {
                     try {
                         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                         const oscillator = audioCtx.createOscillator();
@@ -1351,122 +1324,153 @@
                         oscillator.frequency.setValueAtTime(updateType === 'gas' ? 900 : 440, audioCtx.currentTime);
                         oscillator.connect(audioCtx.destination);
                         oscillator.start();
-                        oscillator.stop(audioCtx.currentTime + 0.3);
+                        oscillator.stop(audioCtx.currentTime + 0.5);
                     } catch (e) { }
+                };
+
+                if (isCritical) {
+                    if (!window.activeAlarmInterval) {
+                        playBeep();
+                        window.activeAlarmInterval = setInterval(playBeep, 1000);
+                    }
+                } else {
+                    if (window.activeAlarmInterval) {
+                        clearInterval(window.activeAlarmInterval);
+                        window.activeAlarmInterval = null;
+                    }
                 }
 
+                const sensorName = updateType === 'gas' ? 'مؤشر الغاز' : updateType === 'soda' ? 'كفاءة الجير' : 'سنسور';
                 const msg = val < 45 
-                    ? `نسبة القراية حرجة: ${val} ${updateType === 'gas' ? 'PSI' : '%'}`
-                    : `نسبة قراية السنسور جيدة: ${val} ${updateType === 'gas' ? 'PSI' : '%'}`;
+                    ? `الجهاز في حالة حرجة | الجهاز: ${selectedDevice.name} | السنسور: ${sensorName} | القراءة: ${val}`
+                    : `الأجهزة في حالة جيدة | الجهاز: ${selectedDevice.name} | السنسور: ${sensorName} | القراءة: ${val}`;
                 
-                const newNotif = {
+                setNotifications(prev => [{
                     id: Date.now(),
                     message: msg,
                     timestamp: new Date().toISOString(),
                     receiver_type: val < 45 ? 'Doctor' : 'Technician',
+                    severity: val < 45 ? 'danger' : 'success',
                     is_read: false
-                };
+                }, ...prev].slice(0, 50));
 
-                setNotifications(prev => [newNotif, ...prev].slice(0, 50));
-
-                try {
-                    // Update locally first for instant visual feedback on charts
-                    setDevices(prev => prev.map(d => {
-                        if (d.id === selectedDevice.id) {
-                            const field = updateType === 'gas' ? 'pressure' : (updateType === 'soda' ? 'gas_level' : (updateType === 'flow' ? 'flow_rate' : 'battery_level'));
-                            const historyKey = updateType === 'gas' ? 'history' : (updateType === 'soda' ? 'soda_history' : (updateType === 'flow' ? 'flow_history' : 'battery_history'));
-
-                            const oldHist = d[historyKey] || [];
-                            let newHist;
-                            if (oldHist.length === 0) {
-                                // Initialize with 15 wavy points centered on the new value to look like the clinical image
-                                newHist = Array.from({ length: 15 }, (_, i) => val + (Math.sin(i) * 0.4));
-                            } else {
-                                newHist = [...oldHist, val].slice(-15);
+                setDevices(prev => prev.map(d => {
+                    if (d.id === selectedDevice.id) {
+                        const field = updateType === 'gas' ? 'pressure' : 'soda_lime';
+                        const historyKey = updateType === 'gas' ? 'history' : 'soda_history';
+                        const oldHist = d[historyKey] || [];
+                        const newHist = oldHist.length === 0 ? Array.from({ length: 15 }, (_, i) => val + (Math.sin(i) * 0.4)) : [...oldHist, val].slice(-15);
+                        
+                        return {
+                            ...d,
+                            [historyKey]: newHist,
+                            health: {
+                                ...d.health,
+                                [field]: val,
+                                gas_level: updateType === 'gas' ? val : (d.health?.gas_level || 100),
+                                pressure: updateType === 'gas' ? val : (d.health?.pressure || 100),
+                                soda_lime: updateType === 'soda' ? val : (d.health?.soda_lime || 100),
+                                status: isCritical ? 'Critical' : 'Active'
                             }
-
-                            return {
-                                ...d,
-                                [historyKey]: newHist,
-                                health: {
-                                    ...d.health,
-                                    [field]: val,
-                                    status: isCritical ? 'Critical' : 'Active'
-                                }
-                            };
-                        }
-                        return d;
-                    }));
-                } catch (err) { }
+                        };
+                    }
+                    return d;
+                }));
             };
 
             const handleAutoTrain = async () => {
                 if (!selectedDevice) return;
 
-                // 1. Close the modal immediately as requested
                 setShowTelemetryModal(false);
-
-                // 2. Small delay to let the modal animation finish
                 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
                 await sleep(400);
 
                 try {
                     for (let i = 0; i < 6; i++) {
+                        let val;
+                        if (i === 5) {
+                            // Last reading must be greater than 45
+                            val = parseFloat((46 + Math.random() * 50).toFixed(1));
+                        } else {
+                            const isCriticalReading = Math.random() < 0.4;
+                            val = parseFloat((isCriticalReading ? (30 + Math.random() * 14) : (88 + Math.random() * 8)).toFixed(1));
+                        }
+                        
+                        // Sync to Backend
+                        try {
+                            const payload = {
+                                gas_level: updateType === 'gas' ? val : (selectedDevice.health?.gas_level || 100),
+                                pressure: updateType === 'gas' ? val : (selectedDevice.health?.pressure || 100),
+                                soda_lime: updateType === 'soda' ? val : (selectedDevice.health?.soda_lime || 100),
+                                flow_rate: selectedDevice.health?.flow_rate || 5.0,
+                                battery_level: selectedDevice.health?.battery_level || 100.0
+                            };
+                            await fetch(`http://localhost:8000/devices/${selectedDevice.id}/telemetry`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                        } catch (e) { }
+
                         setDevices(prev => prev.map(d => {
                             if (d.id === selectedDevice.id) {
-                                const newHealth = { ...d.health };
                                 const updates = {};
-
-                                let val;
+                                const newHealth = { ...d.health };
+                                
                                 if (updateType === 'gas') {
-                                    // Range 35 to 65 to show both good and critical messages
-                                    val = parseFloat((35 + Math.random() * 30).toFixed(2));
                                     updates.history = [...(d.history || []), val].slice(-15);
+                                    newHealth.gas_level = val;
                                     newHealth.pressure = val;
-                                    
-                                    if (val < 45) {
-                                        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                                        const oscillator = audioCtx.createOscillator();
-                                        oscillator.type = 'sawtooth';
-                                        oscillator.frequency.setValueAtTime(900, audioCtx.currentTime);
-                                        oscillator.connect(audioCtx.destination);
-                                        oscillator.start();
-                                        oscillator.stop(audioCtx.currentTime + 0.2);
-                                    }
                                 } else {
-                                    val = parseFloat((38 + Math.random() * 32).toFixed(1));
                                     updates.soda_history = [...(d.soda_history || []), val].slice(-15);
                                     newHealth.soda_lime = val;
+                                    newHealth.pressure = val;
+                                }
 
-                                    if (val < 45) {
+                                const playBeep = () => {
+                                    try {
                                         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                                         const oscillator = audioCtx.createOscillator();
-                                        oscillator.type = 'sine';
-                                        oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+                                        oscillator.type = updateType === 'gas' ? 'sawtooth' : 'sine';
+                                        oscillator.frequency.setValueAtTime(updateType === 'gas' ? 900 : 440, audioCtx.currentTime);
                                         oscillator.connect(audioCtx.destination);
                                         oscillator.start();
-                                        oscillator.stop(audioCtx.currentTime + 0.2);
+                                        oscillator.stop(audioCtx.currentTime + 0.5);
+                                    } catch (e) { }
+                                };
+
+                                if (val < 45) {
+                                    if (!window.activeAlarmInterval) {
+                                        playBeep();
+                                        window.activeAlarmInterval = setInterval(playBeep, 1000);
+                                    }
+                                } else {
+                                    if (window.activeAlarmInterval) {
+                                        clearInterval(window.activeAlarmInterval);
+                                        window.activeAlarmInterval = null;
                                     }
                                 }
 
+                                const sensorName = updateType === 'gas' ? 'مؤشر الغاز' : 'كفاءة الجير';
                                 const msg = val < 45 
-                                    ? `نسبة القراية حرجة: ${val} ${updateType === 'gas' ? 'PSI' : '%'}`
-                                    : `نسبة قراية السنسور جيدة: ${val} ${updateType === 'gas' ? 'PSI' : '%'}`;
+                                    ? `الجهاز في حالة حرجة | الجهاز: ${d.name} | السنسور: ${sensorName} | القراءة: ${val}`
+                                    : `الأجهزة في حالة جيدة | الجهاز: ${d.name} | السنسور: ${sensorName} | القراءة: ${val}`;
                                 
-                                setNotifications(prev => [{
+                                setNotifications(prevNotifs => [{
                                     id: Date.now() + Math.random(),
                                     message: msg,
                                     timestamp: new Date().toISOString(),
                                     receiver_type: val < 45 ? 'Doctor' : 'Technician',
+                                    severity: val < 45 ? 'danger' : 'success',
                                     is_read: false
-                                }, ...prev].slice(0, 50));
+                                }, ...prevNotifs].slice(0, 50));
 
                                 return {
                                     ...d,
                                     ...updates,
                                     health: {
                                         ...newHealth,
-                                        status: (newHealth.pressure < 45 || newHealth.soda_lime < 45) ? 'Critical' : 'Active'
+                                        status: (newHealth.gas_level < 45 || newHealth.soda_lime < 45) ? 'Critical' : 'Active'
                                     }
                                 };
                             }
@@ -1572,28 +1576,45 @@
                     case 'technicians':
                         return (
                             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-5 duration-500">
-                                <div className="flex justify-between items-end pr-2">
+                                <div className="flex justify-between items-center pr-2 flex-row-reverse text-right" dir="rtl">
                                     <div>
-                                        <h2 className="text-3xl font-black text-gray-900 tracking-tight mb-2">Authorized Technicians</h2>
-                                        <p className="text-gray-500 font-bold text-sm tracking-wide">Verified repair experts for medical equipment</p>
+                                        <h2 className="text-3xl font-black text-gray-900 tracking-tight mb-2">الفنيين المعتمدين</h2>
+                                        <p className="text-gray-500 font-bold text-sm tracking-wide">خبراء صيانة معتمدين للأجهزة الطبية</p>
                                     </div>
-
+                                    <button
+                                        onClick={() => setShowAddTechModal(true)}
+                                        className="py-4 px-8 bg-[#4F46E5] hover:bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2"
+                                    >
+                                        <i data-lucide="plus" className="w-5 h-5"></i>
+                                        <span>إضافة فني جديد</span>
+                                    </button>
                                 </div>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                     {filteredTechnicians.length > 0 ? filteredTechnicians.map((tech, i) => (
-                                        <div key={i} className="bg-white/95 backdrop-blur-2xl p-10 rounded-[3rem] shadow-xl border border-white/50 relative group transition-all hover:scale-[1.01]">
-                                            <div className="flex gap-6 mb-8">
-                                                <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-xl font-black text-gray-800 shadow-inner border border-gray-100">
+                                        <div key={i} 
+                                            onClick={() => { setSelectedTech(tech); setShowTechModal(true); }}
+                                            className="bg-white/95 backdrop-blur-2xl p-10 rounded-[3rem] shadow-xl border border-white/50 relative group transition-all hover:scale-[1.01] cursor-pointer flex flex-col justify-between text-right"
+                                            dir="rtl"
+                                        >
+                                            <div className="flex gap-6 mb-6 flex-row-reverse">
+                                                <div className="w-16 h-16 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl flex items-center justify-center text-xl font-black text-[#4F46E5] shadow-inner border border-indigo-200/50">
                                                     {tech.name[0]}
                                                 </div>
-                                                <div>
+                                                <div className="flex-1">
                                                     <h3 className="text-xl font-black text-gray-900">{tech.name}</h3>
-                                                    <div className="flex items-center gap-1 text-amber-500 mt-1">
+                                                    <div className="flex items-center gap-1 text-amber-500 mt-2 justify-end flex-row-reverse">
                                                         <i data-lucide="star" className="w-3.5 h-3.5 fill-current"></i>
-                                                        <span className="text-xs font-black">4.{8 + (i % 2)}</span>
+                                                        <span className="text-xs font-black">{tech.rating || '5.0'}</span>
                                                     </div>
                                                 </div>
+                                            </div>
+                                            <div className="border-t border-gray-100 pt-4 mt-2 flex justify-between items-center flex-row-reverse">
+                                                <div className="flex flex-col gap-1 text-right items-end">
+                                                    <span className="text-xs text-gray-400 font-bold">الهاتف: {(tech.location || '').split('|||')[0] || 'غير متوفر'}</span>
+                                                    <span className="text-[11px] text-gray-400 font-bold">محل الإقامة: {(tech.location || '').split('|||')[1] || 'غير متوفر'}</span>
+                                                </div>
+                                                <span className="text-sm text-[#4F46E5] font-black">{tech.price_per_hour || tech.price || 'غير محدد'}</span>
                                             </div>
                                         </div>
                                     )) : (
@@ -1611,7 +1632,6 @@
                                         <i data-lucide="hospital" className="w-10 h-10 text-rose-500"></i>
                                     </div>
                                     <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-2">سوق ادوات جهاز التخدير</h2>
-                                    <p className="text-gray-500 font-bold">Manage equipment orders and logistics</p>
                                 </div>
 
                                 <div className="space-y-8">
@@ -1624,12 +1644,11 @@
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         {[
-                                            { name: 'جهاز التخدير المتكامل', price: '45,000$', img: 'anesthesia_machine.png' },
-                                            { name: 'طقم منظار الحنجرة', price: '850$', img: 'laryngoscope.png' },
-                                            { name: 'وحدة المبخر (Vaporizer)', price: '2,400$', img: 'vaporizer.png' },
-                                            { name: 'مضخة محاليل (Syringe Pump)', price: '1,200$', img: 'vaporizer.png' },
-                                            { name: 'جهاز شفط (Suction Unit)', price: '450$', img: 'anesthesia_machine.png' },
-                                            { name: 'شاشة مراقبة العمليات', price: '5,000$', img: 'anesthesia_machine.png' }
+                                            { name: 'طقم منظار الحنجرة', price: '120$', img: 'laryngoscope.png' },
+                                            { name: 'وحدة المبخر', price: '950$', img: 'vaporizer.png' },
+                                            { name: 'مضخة محاليل', price: '280$', img: 'vaporizer.png' },
+                                            { name: 'جهاز شفط', price: '140$', img: 'anesthesia_machine.png' },
+                                            { name: 'شاشة مراقبة العمليات', price: '450$', img: 'anesthesia_machine.png' }
                                         ].map((item, i) => (
                                             <div key={i} className="bg-white/80 backdrop-blur-xl p-3 rounded-3xl border border-white shadow-xl flex flex-col group hover:scale-[1.02] transition-all">
                                                 <div className="w-full h-24 bg-gray-50 rounded-2xl overflow-hidden mb-3 border border-gray-100">
@@ -1735,8 +1754,10 @@
                             {/* Modal Header */}
                             <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                                 <div>
-                                    <h3 className="text-2xl font-black text-gray-800">New Equipment Order</h3>
-                                    <p className="text-gray-500 text-sm font-medium mt-1">Step {orderStep} of 3</p>
+                                    <h3 className="text-2xl font-black text-gray-800 text-right">{t("طلب معدات")}</h3>
+                                    <p className="text-gray-500 text-sm font-medium mt-1 text-right">
+                                        {language === 'ar' ? `الخطوة ${orderStep} من 3` : `Step ${orderStep} of 3`}
+                                    </p>
                                 </div>
                                 <button onClick={() => { setShowOrderModal(false); setOrderStep(1); }} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
                                     <i data-lucide="x" className="w-6 h-6 text-gray-400"></i>
@@ -1755,18 +1776,18 @@
                             <div className="p-8 min-h-[300px]">
                                 {orderStep === 1 && (
                                     <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                                        <h4 className="font-black text-lg text-gray-800">سوق ادوات جهاز التخدير</h4>
+                                        <h4 className="font-black text-lg text-gray-800">{t("سوق ادوات جهاز التخدير")}</h4>
                                         <div className="grid grid-cols-3 gap-3">
                                             {[
-                                                { name: 'جهاز التخدير المتكامل', price: '45,000$', img: 'anesthesia_machine.png' },
-                                                { name: 'طقم منظار الحنجرة (Laryngoscope)', price: '850$', img: 'laryngoscope.png' },
-                                                { name: 'وحدة المبخر (Vaporizer)', price: '2,400$', img: 'vaporizer.png' },
-                                                { name: 'شاشة مراقبة العمليات', price: '5,000$', img: 'anesthesia_machine.png' },
-                                                { name: 'مضخة محاليل (Syringe Pump)', price: '1,200$', img: 'vaporizer.png' },
-                                                { name: 'جهاز شفط (Suction Unit)', price: '450$', img: 'anesthesia_machine.png' },
-                                                { name: 'أسطوانة أكسجين (Oxygen)', price: '350$', img: 'vaporizer.png' },
-                                                { name: 'دائرة التخدير (Circuit)', price: '120$', img: 'laryngoscope.png' },
-                                                { name: 'قناع تخدير (Anesthesia Mask)', price: '25$', img: 'laryngoscope.png' }
+                                                { name: 'جهاز التخدير المتكامل', price: '3,800$', img: 'anesthesia_machine.png' },
+                                                { name: 'طقم منظار الحنجرة', price: '120$', img: 'laryngoscope.png' },
+                                                { name: 'وحدة المبخر', price: '950$', img: 'vaporizer.png' },
+                                                { name: 'شاشة مراقبة العمليات', price: '450$', img: 'anesthesia_machine.png' },
+                                                { name: 'مضخة محاليل', price: '280$', img: 'vaporizer.png' },
+                                                { name: 'جهاز شفط', price: '140$', img: 'anesthesia_machine.png' },
+                                                { name: 'أسطوانة أكسجين', price: '85$', img: 'vaporizer.png' },
+                                                { name: 'دائرة التخدير', price: '22$', img: 'laryngoscope.png' },
+                                                { name: 'قناع تخدير', price: '9$', img: 'laryngoscope.png' }
                                             ].map(item => (
                                                 <button
                                                     key={item.name}
@@ -1777,44 +1798,55 @@
                                                         <img src={item.img} alt={item.name} className="w-full h-full object-contain p-1" />
                                                     </div>
                                                     <div className="w-full flex justify-between items-center gap-2">
-                                                        <span className="font-bold text-gray-800 text-[11px] leading-tight flex-1">{item.name}</span>
-                                                        <span className="text-[#4F46E5] font-black text-xs">{item.price}</span>
+                                                        <span className="font-bold text-gray-800 text-[11px] leading-tight flex-1">{t(item.name)}</span>
+                                                        <span className="text-[#4F46E5] font-black text-xs">
+                                                            {window.formatCurrency ? window.formatCurrency(item.price, language) : item.price}
+                                                        </span>
                                                     </div>
                                                 </button>
                                             ))}
+                                        </div>
+                                        <div className="mt-6 flex justify-end flex-row-reverse">
+                                            <button 
+                                                onClick={() => setOrderStep(2)} 
+                                                disabled={!orderData.equipment}
+                                                className={`px-8 py-3 rounded-xl font-black text-sm transition-all ${orderData.equipment ? 'bg-[#4F46E5] text-white hover:scale-105 shadow-xl' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                                            >
+                                                {t("التالي")}
+                                            </button>
                                         </div>
                                     </div>
                                 )}
 
                                 {orderStep === 2 && (
                                     <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                                        <h4 className="font-black text-lg text-gray-800">تفاصيل الطلب</h4>
+                                        <h4 className="font-black text-lg text-gray-800">{t("تفاصيل الطلب")}</h4>
                                         <div className="space-y-4">
                                             <div dir="rtl">
-                                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">القسم الطالب</label>
+                                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{t("القسم الطالب")}</label>
                                                 <select
                                                     value={orderData.department}
                                                     onChange={e => setOrderData({ ...orderData, department: e.target.value })}
                                                     className="w-full p-4 rounded-xl border-2 border-gray-200 bg-gray-50 focus:border-indigo-500 focus:outline-none outline-none font-bold text-gray-700 text-right"
                                                 >
-                                                    <option value="" disabled hidden>اختر القسم...</option>
-                                                    <option value="ICU">وحدة العناية المركزة (ICU)</option>
-                                                    <option value="OR">غرفة العمليات (OR)</option>
-                                                    <option value="ER">قسم الطوارئ (ER)</option>
-                                                    <option value="PACU">غرفة الإفاقة (PACU)</option>
-                                                    <option value="NICU">العناية المركزة لحديثي الولادة (NICU)</option>
-                                                    <option value="Ward">الأقسام الداخلية (Wards)</option>
-                                                    <option value="Radiology">قسم الأشعة (Radiology)</option>
-                                                    <option value="OPD">العيادات الخارجية (OPD)</option>
+                                                    <option value="" disabled hidden>{t("اختر القسم...")}</option>
+                                                    <option value="ICU">{t("وحدة العناية المركزة (ICU)")}</option>
+                                                    <option value="OR">{t("غرفة العمليات (OR)")}</option>
+                                                    <option value="ER">{t("قسم الطوارئ (ER)")}</option>
+                                                    <option value="PACU">{t("غرفة الإفاقة (PACU)")}</option>
+                                                    <option value="NICU">{t("العناية المركزة لحديثي الولادة (NICU)")}</option>
+                                                    <option value="Ward">{t("الأقسام الداخلية (Wards)")}</option>
+                                                    <option value="Radiology">{t("قسم الأشعة (Radiology)")}</option>
+                                                    <option value="OPD">{t("العيادات الخارجية (OPD)")}</option>
                                                 </select>
                                             </div>
                                             <div dir="rtl">
-                                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">مستوى الأولوية</label>
+                                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{t("مستوى الأولوية")}</label>
                                                 <div className="flex gap-4">
                                                     {[
-                                                        { id: 'Normal', label: 'عادي' },
-                                                        { id: 'Urgent', label: 'عاجل' },
-                                                        { id: 'Emergency', label: 'طوارئ' }
+                                                        { id: 'Normal', label: t('عادي') },
+                                                        { id: 'Urgent', label: t('عاجل') },
+                                                        { id: 'Emergency', label: t('طوارئ') }
                                                     ].map(level => (
                                                         <button
                                                             key={level.id}
@@ -1827,6 +1859,21 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        <div className="mt-8 flex gap-4 flex-row-reverse">
+                                            <button 
+                                                onClick={() => setOrderStep(3)} 
+                                                disabled={!orderData.department || !orderData.priority}
+                                                className={`flex-1 py-4 rounded-2xl font-black text-sm transition-all ${orderData.department && orderData.priority ? 'bg-[#4F46E5] text-white hover:scale-105 shadow-xl' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                                            >
+                                                {t("التالي")}
+                                            </button>
+                                            <button
+                                                onClick={() => setOrderStep(1)}
+                                                className="px-6 py-4 bg-gray-100 text-gray-600 rounded-2xl font-black text-sm hover:bg-gray-200 transition-all"
+                                            >
+                                                {t("رجوع")}
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
 
@@ -1836,54 +1883,45 @@
                                             <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                                 <i data-lucide="check-circle-2" className="w-10 h-10 text-emerald-500"></i>
                                             </div>
-                                            <h4 className="font-black text-xl text-gray-800">Review Your Order</h4>
-                                            <p className="text-gray-500 font-medium">Please confirm the details below before submitting.</p>
+                                            <h4 className="font-black text-xl text-gray-800">{t("مراجعة الطلب")}</h4>
+                                            <p className="text-gray-500 font-medium">{t("يرجى مراجعة وتأكيد التفاصيل أدناه قبل الإرسال.")}</p>
                                         </div>
-                                        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-4">
-                                            <div className="flex justify-between border-b border-gray-200 pb-3">
-                                                <span className="text-gray-500 font-bold">Equipment</span>
+                                        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-4 text-right" dir="rtl">
+                                            <div className="flex justify-between border-b border-gray-200 pb-3 flex-row-reverse">
+                                                <span className="text-gray-500 font-bold">{t("المعدة")}</span>
                                                 <div className="text-right">
-                                                    <p className="font-black text-gray-800">{orderData.equipment || 'Not selected'}</p>
-                                                    <p className="text-xs text-[#4F46E5] font-black">{orderData.price}</p>
+                                                    <p className="font-black text-gray-800">{t(orderData.equipment) || 'لم يتم الاختيار'}</p>
+                                                    <p className="text-xs text-[#4F46E5] font-black">
+                                                        {window.formatCurrency ? window.formatCurrency(orderData.price, language) : orderData.price}
+                                                    </p>
                                                 </div>
                                             </div>
-                                            <div className="flex justify-between border-b border-gray-200 pb-3">
-                                                <span className="text-gray-500 font-bold">Department</span>
-                                                <span className="font-black text-gray-800">{orderData.department || 'Not selected'}</span>
+                                            <div className="flex justify-between border-b border-gray-200 pb-3 flex-row-reverse">
+                                                <span className="text-gray-500 font-bold">{t("القسم الطالب")}</span>
+                                                <span className="font-black text-gray-800">{t(orderData.department) || 'لم يتم الاختيار'}</span>
                                             </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-500 font-bold">Priority</span>
-                                                <span className={`font-black ${orderData.priority === 'Emergency' ? 'text-rose-500' : orderData.priority === 'Urgent' ? 'text-amber-500' : 'text-emerald-500'}`}>{orderData.priority}</span>
+                                            <div className="flex justify-between border-b border-gray-200 pb-3 flex-row-reverse">
+                                                <span className="text-gray-500 font-bold">{t("مستوى الأولوية")}</span>
+                                                <span className="font-black text-gray-800">
+                                                    {orderData.priority === 'Emergency' ? t('طوارئ') : orderData.priority === 'Urgent' ? t('عاجل') : t('عادي')}
+                                                </span>
                                             </div>
                                         </div>
+                                        <div className="flex gap-4 flex-row-reverse">
+                                            <button
+                                                onClick={handleOrderSubmit}
+                                                className="flex-1 py-4 bg-[#4F46E5] text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all"
+                                            >
+                                                {t("تأكيد وإرسال الطلب")}
+                                            </button>
+                                            <button
+                                                onClick={() => setOrderStep(2)}
+                                                className="px-6 py-4 bg-gray-100 text-gray-600 rounded-2xl font-black text-sm hover:bg-gray-200 transition-all"
+                                            >
+                                                {t("رجوع")}
+                                            </button>
+                                        </div>
                                     </div>
-                                )}
-                            </div>
-
-                            {/* Modal Footer */}
-                            <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
-                                <button
-                                    onClick={() => setOrderStep(Math.max(1, orderStep - 1))}
-                                    className={`px-6 py-3 font-bold text-gray-500 hover:text-gray-800 transition-colors ${orderStep === 1 ? 'invisible' : ''}`}
-                                >
-                                    Back
-                                </button>
-
-                                {orderStep < 3 ? (
-                                    <button
-                                        onClick={() => setOrderStep(Math.min(3, orderStep + 1))}
-                                        disabled={orderStep === 1 && !orderData.equipment || orderStep === 2 && !orderData.department}
-                                        className="px-8 py-3 bg-[#4F46E5] hover:bg-indigo-700 text-white rounded-xl font-black shadow-lg shadow-[#4F46E5]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                    >
-                                        Continue <i data-lucide="arrow-right" className="w-4 h-4"></i>
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={handleOrderSubmit}
-                                        className="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black shadow-lg shadow-emerald-200 transition-all flex items-center gap-2"
-                                    >
-                                        تم <i data-lucide="check" className="w-4 h-4"></i>
-                                    </button>
                                 )}
                             </div>
                         </div>
@@ -1892,84 +1930,159 @@
             };
 
             const renderTechModal = () => {
-                if (!showTechModal) return null;
+                if (!showTechModal || !selectedTech) return null;
 
-                const tech = {
-                    name: "Sarah Williams",
-                    role: "Anesthesia Unit G7 Expert",
-                    specialty: "Anesthesia Systems",
-                    location: "Maadi, Cairo",
-                    rating: 4.8,
-                    bio: "Specialized in high-precision anesthesia machines and ventilation mechanics. Over 10 years of experience in clinical engineering.",
-                    status: "On-Call",
-                    phone: "+20 123 456 7890",
-                    email: "s.williams@medguard.com"
-                };
+                const tech = selectedTech;
 
                 return (
                     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-8 animate-in fade-in duration-300">
                         <div className="glass rounded-[3rem] bg-white border border-indigo-100 w-full max-w-xl shadow-2xl relative overflow-hidden mesh-gradient">
-                            <div className="p-10">
-                                <div className="flex justify-between items-start mb-8">
-                                    <div className="flex gap-6">
+                            <div className="p-10 text-right" dir="rtl">
+                                <div className="flex justify-between items-start mb-8 flex-row-reverse">
+                                    <div className="flex gap-6 flex-row-reverse text-right">
                                         <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center text-white text-3xl font-black shadow-xl">
                                             {tech.name.charAt(0)}
                                         </div>
                                         <div>
-                                            <div className="flex items-center gap-3 mb-1">
+                                            <div className="flex items-center gap-3 mb-1 justify-end flex-row-reverse">
                                                 <h3 className="text-2xl font-black text-gray-800">{tech.name}</h3>
-                                                <span className="px-3 py-1 bg-amber-100 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-widest">{tech.status}</span>
+                                                <span className="px-3 py-1 bg-amber-100 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-widest">نشط</span>
                                             </div>
-                                            <p className="text-[#4F46E5] font-bold mb-3">{tech.role}</p>
-                                            <div className="flex items-center gap-4">
-                                                <div className="flex items-center gap-1.5">
+                                            <p className="text-[#4F46E5] font-bold mb-3">{tech.specialty}</p>
+                                            <div className="flex items-center gap-4 justify-end flex-row-reverse">
+                                                <div className="flex items-center gap-1.5 flex-row-reverse">
                                                     <i data-lucide="star" className="w-4 h-4 text-amber-400 fill-current"></i>
-                                                    <span className="text-sm font-black text-gray-700">{tech.rating}</span>
+                                                    <span className="text-sm font-black text-gray-700">{tech.rating || '5.0'}</span>
                                                 </div>
-                                                <div className="flex items-center gap-1.5 text-gray-400">
-                                                    <i data-lucide="map-pin" className="w-4 h-4"></i>
-                                                    <span className="text-xs font-bold">{tech.location}</span>
+                                                <div className="flex items-center gap-1.5 text-gray-400 flex-row-reverse">
+                                                    <i data-lucide="phone" className="w-4 h-4"></i>
+                                                    <span className="text-xs font-bold">{tech.location || 'غير متوفر'}</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <button onClick={() => setShowTechModal(false)} className="p-3 hover:bg-gray-100 rounded-2xl transition-colors">
+                                    <button onClick={() => { setShowTechModal(false); setSelectedTech(null); }} className="p-3 hover:bg-gray-100 rounded-2xl transition-colors">
                                         <i data-lucide="x" className="w-6 h-6 text-gray-400"></i>
                                     </button>
                                 </div>
 
                                 <div className="space-y-8">
                                     <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
-                                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Professional Bio</h4>
-                                        <p className="text-sm text-gray-600 leading-relaxed font-medium">{tech.bio}</p>
+                                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">تفاصيل الفني</h4>
+                                        <div className="space-y-2">
+                                            <p className="text-sm text-gray-600 leading-relaxed font-bold">سعر خدمة الفني: <span className="text-gray-900">{tech.price_per_hour || tech.price || 'غير محدد'}</span></p>
+                                            <p className="text-sm text-gray-600 leading-relaxed font-bold">رقم الهاتف: <span className="text-gray-900">{tech.location || 'غير متوفر'}</span></p>
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
-                                        <a href={`tel:${tech.phone}`} className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-indigo-50 hover:border-indigo-200 transition-all group">
+                                        <a href={`tel:${(tech.location || '').split('|||')[0]}`} className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-indigo-50 hover:border-indigo-200 transition-all group flex-row-reverse">
                                             <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-[#4F46E5] group-hover:bg-[#4F46E5] group-hover:text-white transition-all">
                                                 <i data-lucide="phone" className="w-5 h-5"></i>
                                             </div>
-                                            <div>
-                                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Call Technician</p>
-                                                <p className="text-xs font-black text-gray-800">{tech.phone}</p>
+                                            <div className="text-right">
+                                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">اتصل بالفني</p>
+                                                <p className="text-xs font-black text-gray-800">{(tech.location || '').split('|||')[0] || 'غير متوفر'}</p>
                                             </div>
                                         </a>
-                                        <a href={`mailto:${tech.email}`} className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-indigo-50 hover:border-indigo-200 transition-all group">
-                                            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-[#4F46E5] group-hover:bg-[#4F46E5] group-hover:text-white transition-all">
-                                                <i data-lucide="mail" className="w-5 h-5"></i>
+                                        <div className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-indigo-50 flex-row-reverse">
+                                            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-[#4F46E5]">
+                                                <i data-lucide="credit-card" className="w-5 h-5"></i>
                                             </div>
-                                            <div>
-                                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Email Specialist</p>
-                                                <p className="text-xs font-black text-gray-800">Send Message</p>
+                                            <div className="text-right">
+                                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">سعر الخدمة</p>
+                                                <p className="text-xs font-black text-gray-800">{tech.price_per_hour || tech.price || 'غير محدد'}</p>
                                             </div>
-                                        </a>
+                                        </div>
                                     </div>
 
                                     <div className="flex gap-4">
-                                        <button className="flex-1 py-5 bg-[#4F46E5] text-white rounded-[1.5rem] font-black text-sm shadow-xl shadow-indigo-100 hover:scale-[1.02] transition-all flex items-center justify-center gap-3">
-                                            <i data-lucide="calendar" className="w-5 h-5"></i> تم
+                                        <button onClick={() => { setShowTechModal(false); setSelectedTech(null); }} className="w-full py-5 bg-[#4F46E5] text-white rounded-[1.5rem] font-black text-sm shadow-xl shadow-indigo-100 hover:scale-[1.02] transition-all flex items-center justify-center gap-3">
+                                            تم
                                         </button>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+
+            const renderAddTechModal = () => {
+                if (!showAddTechModal) return null;
+                return (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-xl z-[250] flex items-center justify-center p-8 animate-in zoom-in-95 fade-in duration-500">
+                        <div className="bg-white/95 backdrop-blur-3xl rounded-[4rem] p-16 border border-white w-full max-w-2xl shadow-[0_40px_100px_rgba(79,70,229,0.15)] relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+                            
+                            <div className="text-center mb-12" dir="rtl">
+                                <h3 className="text-4xl font-black text-gray-900 mb-4 tracking-tighter">إضافة فني معتمد جديد</h3>
+                                <p className="text-gray-500 text-sm font-bold leading-relaxed max-w-md mx-auto opacity-80">
+                                    أدخل معلومات الفني لتسجيله في النظام وتعيين مهامه صيانة الأجهزة الطبية.
+                                </p>
+                            </div>
+
+                            <div className="space-y-8" dir="rtl">
+                                <div className="relative group">
+                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">اسم الفني</label>
+                                    <input
+                                        type="text"
+                                        value={newTechData.name}
+                                        onChange={e => setNewTechData({ ...newTechData, name: e.target.value })}
+                                        className="w-full px-8 py-6 rounded-3xl bg-gray-50/50 border-2 border-gray-100 text-gray-800 font-black text-lg focus:outline-none focus:border-[#4F46E5] focus:bg-white transition-all placeholder:text-gray-300"
+                                        placeholder="مثال: م. أحمد عبد الله"
+                                    />
+                                </div>
+
+                                <div className="relative group">
+                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">رقم الهاتف</label>
+                                    <input
+                                        type="text"
+                                        value={newTechData.phone}
+                                        onChange={e => setNewTechData({ ...newTechData, phone: e.target.value })}
+                                        className="w-full px-8 py-6 rounded-3xl bg-gray-50/50 border-2 border-gray-100 text-gray-800 font-black text-lg focus:outline-none focus:border-[#4F46E5] focus:bg-white transition-all placeholder:text-gray-300"
+                                        placeholder="مثال: 01012345678"
+                                    />
+                                </div>
+
+                                <div className="relative group">
+                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">محل الإقامة</label>
+                                    <input
+                                        type="text"
+                                        value={newTechData.location}
+                                        onChange={e => setNewTechData({ ...newTechData, location: e.target.value })}
+                                        className="w-full px-8 py-6 rounded-3xl bg-gray-50/50 border-2 border-gray-100 text-gray-800 font-black text-lg focus:outline-none focus:border-[#4F46E5] focus:bg-white transition-all placeholder:text-gray-300"
+                                        placeholder="مثال: القاهرة، مدينة نصر"
+                                    />
+                                </div>
+
+                                <div className="relative group">
+                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">سعر الخدمة (السعر)</label>
+                                    <input
+                                        type="text"
+                                        value={newTechData.price}
+                                        onChange={e => setNewTechData({ ...newTechData, price: e.target.value })}
+                                        className="w-full px-8 py-6 rounded-3xl bg-gray-50/50 border-2 border-gray-100 text-gray-800 font-black text-lg focus:outline-none focus:border-[#4F46E5] focus:bg-white transition-all placeholder:text-gray-300"
+                                        placeholder="مثال: 300 ج.م/ساعة"
+                                    />
+                                </div>
+
+
+
+                                <div className="flex gap-6 pt-6">
+                                    <button
+                                        onClick={handleRegisterTech}
+                                        className="flex-[2] py-6 bg-gradient-to-r from-[#4F46E5] to-[#6366f1] text-white rounded-[2rem] font-black text-xl shadow-2xl shadow-indigo-200 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
+                                    >
+                                        تم
+                                    </button>
+                                    <button
+                                        onClick={() => setShowAddTechModal(false)}
+                                        className="flex-1 py-6 bg-indigo-50 text-[#4F46E5] rounded-[2rem] font-black text-lg transition-all hover:bg-indigo-100 active:scale-[0.98]"
+                                    >
+                                        إلغاء
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1993,7 +2106,7 @@
 
                             <div className="space-y-8" dir="rtl">
                                 <div className="relative group">
-                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">اسم الجهاز المستخدم (DEVICE NAME)</label>
+                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">اسم الجهاز المستخدم</label>
                                     <input
                                         type="text"
                                         value={newDeviceData.name}
@@ -2006,7 +2119,7 @@
 
 
                                 <div className="relative group">
-                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">وقت تسجيل الدخول (REGISTRATION DATE)</label>
+                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">وقت تسجيل الدخول</label>
                                     <div className="relative">
                                         <input
                                             type="date"
@@ -2019,7 +2132,7 @@
                                 </div>
 
                                 <div className="relative group">
-                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">ساعة تسجيل الدخول (REGISTRATION TIME)</label>
+                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">ساعة تسجيل الدخول</label>
                                     <div className="relative">
                                         <input
                                             type="time"
@@ -2154,7 +2267,7 @@
                                 <img src="logo_v4.png" alt="Shield Logo" className="w-32 h-32 object-contain drop-shadow-2xl" style={{mixBlendMode:'multiply'}} />
                             </div>
                             <h2 className="text-base font-black text-white tracking-widest drop-shadow-md mt-1">
-                                MEDICAL ASSISTANT
+                                المساعد الطبي
                             </h2>
                         </div>
 
@@ -2165,26 +2278,9 @@
                             <NavItem id="technicians" label={t('technicians')} icon="wrench" active={activeTab === 'technicians'} onClick={setActiveTab} />
                             <NavItem id="hospital" label={language === 'ar' ? 'سوق الأدوات' : 'Tools Market'} icon="shopping-cart" active={activeTab === 'hospital'} onClick={setActiveTab} />
                             
-                                <div className="mt-8 p-4 rounded-3xl bg-slate-800/40 border border-slate-700/50 relative overflow-hidden group/hud">
-                                    <div className="absolute inset-0 bg-gradient-to-t from-blue-500/10 to-transparent"></div>
-                                    <div className="relative z-10 flex items-center justify-between">
-                                        <div className="flex flex-col gap-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
-                                                <span className="text-[10px] font-black text-slate-400">مؤشر سلامة البروتوكول</span>
-                                            </div>
-                                            <div className="flex items-baseline gap-1">
-                                                <span className="text-2xl font-black text-white">100</span>
-                                                <span className="text-sm font-bold text-emerald-400">%</span>
-                                            </div>
-                                            <span className="text-xs font-bold text-blue-400 mt-1">الاستخبارات عبر الإنترنت</span>
-                                        </div>
+                                {/* Removed Protocol Health Card as requested */}
 
-                                    </div>
-                                    <div className="mt-3 text-[9px] font-black tracking-widest text-slate-500 uppercase text-center border-t border-slate-700/50 pt-2">
-                                        سجل البروتوكول
-                                    </div>
-                                </div>
+
                                 <button
                                     onClick={() => {
                                         setIsLoggedIn(false);
@@ -2210,11 +2306,29 @@
                                         البنية التحتية للأجهزة الطبية
                                     </span>
                                     <h1 className="text-4xl font-black text-white tracking-tight drop-shadow-lg">
-                                        Engineer Michael's Intel-Laboratory
+                                        مختبر ذكاء المهندس مايكل
                                     </h1>
                                 </div>
                             <div className="flex items-center gap-6">
-
+                                <div className="relative group z-50">
+                                    <button className="flex items-center gap-2 px-4 py-3 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 text-white font-bold text-sm hover:bg-white/10 transition-colors">
+                                        <i data-lucide="globe" className="w-4 h-4"></i>
+                                        {{en: 'English', ar: 'العربية', de: 'Deutsch', es: 'Español', pt: 'Português', hi: 'हिन्दी', tr: 'Türkçe'}[language]}
+                                    </button>
+                                    <div className="absolute top-full mt-2 w-40 bg-white rounded-2xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col overflow-hidden">
+                                        {[
+                                            { code: 'en', label: 'English' },
+                                            { code: 'ar', label: 'العربية' },
+                                            { code: 'de', label: 'Deutsch' },
+                                            { code: 'es', label: 'Español' },
+                                            { code: 'pt', label: 'Português' },
+                                            { code: 'hi', label: 'हिन्दी' },
+                                            { code: 'tr', label: 'Türkçe' }
+                                        ].map(l => (
+                                            <button key={l.code} onClick={() => setLanguage(l.code)} className={`px-4 py-3 text-sm font-bold text-left hover:bg-gray-50 transition-colors ${language === l.code ? 'text-indigo-600 bg-indigo-50/50' : 'text-gray-600'}`}>{l.label}</button>
+                                        ))}
+                                    </div>
+                                </div>
 
                                 <div className="relative group">
                                     <button
@@ -2239,7 +2353,7 @@
                                                     {notifications.length > 0 && (
                                                         <button 
                                                             onClick={(e) => { e.stopPropagation(); setNotifications([]); }}
-                                                            className="text-[10px] font-black text-rose-500 hover:text-rose-600 bg-rose-50 px-3 py-1.5 rounded-xl transition-all"
+                                                                                                                    className="text-[10px] font-black text-rose-500 hover:text-rose-600 bg-rose-50 px-3 py-1.5 rounded-xl transition-all"
                                                         >
                                                             {language === 'ar' ? 'مسح الكل' : 'Clear All'}
                                                         </button>
@@ -2247,97 +2361,30 @@
                                                     <button onClick={() => setShowNotifDropdown(false)} className="text-gray-400 hover:text-gray-600 p-1">
                                                         <i data-lucide="x" className="w-4 h-4"></i>
                                                     </button>
+                                                    
+                                                        
+                                                            
+                                                                
+                                                                
+                                                            
+                                                            
+                                                        
+                                                    
                                                 </div>
                                             </div>
-                                            <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                                                {notifications.length > 0 ? notifications.slice(0, 15).map(n => {
-                                                    const isCritical = n.message.includes('حرجة') || n.message.toLowerCase().includes('critical');
-                                                    return (
-                                                        <div key={n.id} 
-                                                            className={`p-4 rounded-2xl border transition-all shadow-sm relative group/item ${isCritical ? 'bg-rose-50 border-rose-100 text-rose-900' : 'bg-emerald-50 border-emerald-100 text-emerald-900'}`}>
-                                                            <button 
-                                                                onClick={(e) => { e.stopPropagation(); setNotifications(prev => prev.filter(notif => notif.id !== n.id)); }}
-                                                                className="absolute top-3 left-3 w-6 h-6 bg-white/50 hover:bg-white rounded-full flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-all shadow-sm border border-gray-100"
-                                                            >
-                                                                <i data-lucide="x" className="w-3 h-3 text-gray-400"></i>
-                                                            </button>
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <i data-lucide={isCritical ? 'alert-circle' : 'check-circle'} className={`w-3.5 h-3.5 ${isCritical ? 'text-rose-500' : 'text-emerald-500'}`}></i>
-                                                                <span className="font-black text-[10px] uppercase tracking-widest opacity-60">
-                                                                    {isCritical ? (language === 'ar' ? 'تنبيه حرج' : 'Critical Alert') : (language === 'ar' ? 'حالة جيدة' : 'System Good')}
-                                                                </span>
+                                            <div className="mb-6 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                                                {notifications.length === 0 ? (
+                                                    <p className="text-xs text-gray-400 text-center py-4">لا توجد إشعارات</p>
+                                                ) : (
+                                                    <div className="space-y-2">
+                                                        {notifications.map(n => (
+                                                            <div key={n.id} className={`p-3 rounded-2xl border text-right transition-all ${n.severity === 'danger' ? 'bg-rose-50 border-rose-100 text-rose-800' : n.severity === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-indigo-50 border-indigo-100 text-indigo-800'}`}>
+                                                                <p className="text-xs font-black">{n.message}</p>
+                                                                <span className="text-[9px] font-bold opacity-60 mt-2 block">{new Date(n.timestamp).toLocaleTimeString('ar-EG')}</span>
                                                             </div>
-                                                            <p className="font-bold text-xs leading-relaxed">{n.message}</p>
-                                                            <p className="text-[9px] font-bold opacity-40 mt-2 text-right">{new Date(n.timestamp).toLocaleTimeString()}</p>
-                                                        </div>
-                                                    );
-                                                }) : (
-                                                    <p className="text-center text-gray-400 py-10 font-bold italic">No new alerts</p>
+                                                        ))}
+                                                    </div>
                                                 )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="relative">
-                                    <div
-                                        onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                                        className="flex items-center gap-4 bg-white p-2 pr-6 rounded-2xl shadow-sm border border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors"
-                                        dir="rtl"
-                                    >
-                                        <div className="w-10 h-10 bg-[#4F46E5] rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-indigo-100">
-                                            {userData.name ? userData.name[0] : 'هـ'}
-                                        </div>
-                                        <div className="flex flex-col text-right">
-                                            <span className="text-xs font-black text-gray-800">{userData.name || 'المهندس مايكل'}</span>
-                                            <span className="text-[10px] font-bold text-gray-500">{userData.specialty || 'كبير مهندسي أنظمة'}</span>
-                                        </div>
-                                        <i data-lucide="chevron-down" className={`w-4 h-4 text-gray-400 transition-transform ${showProfileDropdown ? 'rotate-180' : ''}`}></i>
-                                    </div>
-
-                                    {showProfileDropdown && (
-                                        <div className="absolute right-0 mt-3 w-72 bg-white rounded-[2rem] shadow-2xl border border-gray-100 p-6 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                                            <div className="mb-6">
-                                                <h4 className="font-black text-xs text-[#4F46E5] uppercase tracking-widest mb-4">Current Session User</h4>
-                                                <div className="p-3 bg-[#4F46E5]/10 rounded-2xl border border-[#00A19B]/20 mb-4">
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className="font-black text-indigo-800 text-sm">{userData.name}</span>
-                                                        <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600">Active</span>
-                                                    </div>
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="text-[10px] font-bold text-[#4F46E5]">{userData.specialty}</span>
-                                                        <span className="text-[10px] font-bold text-indigo-400">{userData.phone}</span>
-                                                    </div>
-                                                </div>
-
-                                                <h4 className="font-black text-xs text-gray-400 uppercase tracking-widest mb-4">Anesthesia Specialist Network</h4>
-                                                <div className="space-y-4">
-                                                    {[
-                                                        { name: "Ahmed Mansour", role: "Imaging & Gas Systems", status: "Available" },
-                                                        { name: "Sarah Williams", role: "Anesthesia Unit G7 Expert", status: "On-Call" },
-                                                        { name: "Michael Chen", role: "Ventilation Mechanics", status: "Available" }
-                                                    ].map((eng, idx) => (
-                                                        <div key={idx} className="flex flex-col gap-1 p-3 bg-gray-50 rounded-2xl border border-gray-100">
-                                                            <div className="flex justify-between items-center">
-                                                                <span className="font-black text-gray-800 text-xs">{eng.name}</span>
-                                                                <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${eng.status === 'On-Call' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>{eng.status}</span>
-                                                            </div>
-                                                            <span className="text-[10px] font-bold text-gray-400">{eng.role}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <div className="mb-6">
-                                                <h4 className="font-black text-xs text-emerald-600 uppercase tracking-widest mb-3">Maintenance Protocols</h4>
-                                                <ul className="text-[10px] font-bold text-gray-500 space-y-2">
-                                                    <li className="flex items-center gap-2 italic">
-                                                        <span className="w-1.5 h-1.5 bg-[#4F46E5]/100 rounded-full"></span>
-                                                        Vaporizer Calibration
-                                                    </li>
-                                                    <li className="flex items-center gap-2 italic">
-                                                        <span className="w-1.5 h-1.5 bg-[#4F46E5]/100 rounded-full"></span>
-                                                        Soda Lime Renewal Trigger
-                                                    </li>
-                                                </ul>
                                             </div>
                                             <div className="pt-4 border-t border-gray-100 space-y-3">
                                                 <div className="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100/50 text-right" dir="rtl">
@@ -2401,60 +2448,9 @@
                     {renderTelemetryModal()}
                     {renderOrderModal()}
                     {renderTechModal()}
+                    {renderAddTechModal()}
                     {renderRegisterModal()}
                     {renderHelpModal()}
-
-                    <div className="fixed bottom-10 left-10 flex flex-col gap-3 z-[110]">
-                        <div className="relative">
-                            {showLangDropdown && (
-                                <div className="absolute bottom-16 left-0 w-64 bg-white/95 backdrop-blur-2xl rounded-[2rem] shadow-2xl border border-gray-100 p-5 animate-in fade-in slide-in-from-bottom-10 duration-500 z-[200]">
-                                    <div className="mb-4 pb-4 border-b border-gray-100 flex gap-2">
-                                        <button
-                                            onClick={() => { setLanguage('ar'); setShowLangDropdown(false); }}
-                                            className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all ${language === 'ar' ? 'bg-[#4F46E5] text-white shadow-lg shadow-indigo-200' : 'bg-indigo-50/50 text-gray-700 hover:bg-indigo-100'}`}>
-                                            العربية (AR)
-                                        </button>
-                                        <button
-                                            onClick={() => { setLanguage('en'); setShowLangDropdown(false); }}
-                                            className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all ${language === 'en' ? 'bg-[#4F46E5] text-white shadow-lg shadow-indigo-200' : 'bg-indigo-50/50 text-gray-700 hover:bg-indigo-100'}`}>
-                                            English (EN)
-                                        </button>
-                                    </div>
-                                    <div className="grid grid-cols-1 gap-1 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-                                        {[
-                                            { id: 'ar', name: 'العربية' },
-                                            { id: 'en', name: 'English' },
-                                            { id: 'fr', name: 'Français' },
-                                            { id: 'it', name: 'Italiano' },
-                                            { id: 'es', name: 'Español' },
-                                            { id: 'de', name: 'Deutsch' },
-                                            { id: 'pt', name: 'Português' },
-                                            { id: 'ja', name: '日本語' },
-                                            { id: 'zh', name: '中文' },
-                                            { id: 'ru', name: 'Русский' },
-                                            { id: 'hi', name: 'हिन्दी' },
-                                            { id: 'tr', name: 'Türkçe' },
-                                            { id: 'el', name: 'Ελληνικά' },
-                                            { id: 'es-AR', name: 'Español (Arg)' }
-                                        ].map(lang => (
-                                            <button
-                                                key={lang.id}
-                                                onClick={() => { setLanguage(lang.id); setShowLangDropdown(false); }}
-                                                className={`text-left px-4 py-3 rounded-xl text-xs font-bold transition-all ${language === lang.id ? 'bg-[#4F46E5] text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
-                                                {lang.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                            <button
-                                onClick={() => setShowLangDropdown(!showLangDropdown)}
-                                className="w-14 h-14 glass rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all text-gray-700 bg-white/60">
-                                <i data-lucide="languages" className="w-6 h-6"></i>
-                            </button>
-                        </div>
-
-                    </div>
                 </div>
             );
         };

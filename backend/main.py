@@ -32,19 +32,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.staticfiles import StaticFiles
+
 app.include_router(devices.router)
 app.include_router(technicians.router)
 app.include_router(notifications.router)
+
+# Mount frontend static files
+app.mount("/frontend", StaticFiles(directory="../frontend"), name="frontend")
 
 
 
 @app.get("/")
 def read_root():
     return {
-        "status": "Secure",
-        "system": "Med-Guard Intelligence Layer",
-        "authorized_engineer": "Michael",
-        "message": "Protocol levels: Stable. Systems are Online."
+        "status": "آمن",
+        "system": "طبقة ذكاء مد-جارد",
+        "authorized_engineer": "مايكل",
+        "message": "مستويات البروتوكول: مستقرة. الأنظمة متصلة بالإنترنت."
     }
 
 if __name__ == "__main__":

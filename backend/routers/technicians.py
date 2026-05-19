@@ -24,5 +24,5 @@ def create_technician(tech: schemas.TechnicianCreate, db: Session = Depends(data
 def get_technician(tech_id: int, db: Session = Depends(database.get_db)):
     tech = db.query(models.Technician).filter(models.Technician.id == tech_id).first()
     if not tech:
-        raise HTTPException(status_code=404, detail="Technician not found")
+        raise HTTPException(status_code=404, detail="لم يتم العثور على الفني")
     return tech

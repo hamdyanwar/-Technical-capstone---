@@ -1,40 +1,35 @@
 """
 =============================================================
   Med-Guard AI Model Accuracy Evaluator
-  يحسب نسبة دقة نموذج الذكاء الاصطناعي للتنبؤ بحالة الأجهزة
-  نسخة المهندس مايكل النهائية (Engineer Michael Final Ver)
+  Calculates the accuracy percentage of the AI model to predict device status.
+  Engineer Michael's Final Edition.
 =============================================================
 """
 
-from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score,
-    classification_report, confusion_matrix
-)
-import numpy as np
-
 # -------------------------------------------------------
-# 1. بيانات الاختبار (Test Dataset)
+# 1. Test Dataset
 # -------------------------------------------------------
 TEST_CASES = [
-    # --- حالات Good (طبيعية) ---
+    # --- Good cases (Normal) ---
     {"p": 35.0, "g": 80.0, "sl": 90.0, "b": 90.0, "p_b": 90.1, "n": 5, "ar": 35.0, "ap": 34.0, "fr": 2.0, "p_fr": 2.0, "actual": "Good"},
     {"p": 40.0, "g": 70.0, "sl": 85.0, "b": 95.0, "p_b": 95.1, "n": 5, "ar": 40.0, "ap": 39.0, "fr": 5.0, "p_fr": 5.0, "actual": "Good"},
     {"p": 37.0, "g": 60.0, "sl": 80.0, "b": 85.0, "p_b": 85.5, "n": 5, "ar": 37.0, "ap": 36.5, "fr": 2.1, "p_fr": 2.0, "actual": "Good"},
     {"p": 33.0, "g": 90.0, "sl": 95.0, "b": 100.0, "p_b": 100, "n": 5, "ar": 33.0, "ap": 32.0, "fr": 1.9, "p_fr": 2.0, "actual": "Good"},
     
-    # --- حالات Warning (تحذير) ---
-    {"p": 29.0, "g": 50.0, "sl": 80.0, "b": 80.0, "p_b": 80.1, "n": 5, "ar": 29.0, "ap": 28.5, "fr": 2.0, "p_fr": 2.0, "actual": "Warning"}, # p < 30 (-20) -> 80 score
-    {"p": 45.0, "g": 55.0, "sl": 85.0, "b": 85.0, "p_b": 85.5, "n": 5, "ar": 45.0, "ap": 38.5, "fr": 2.0, "p_fr": 2.0, "actual": "Warning"}, # p > 44 (-15) -> 85 score
-    {"p": 35.0, "g": 80.0, "sl": 90.0, "b": 90.0, "p_b": 90.1, "n": 5, "ar": 35.0, "ap": 34.5, "fr": 4.5, "p_fr": 2.0, "actual": "Warning"}, # flow instability (-25) -> 75 score
-    {"p": 32.0, "g": 80.0, "sl": 35.0, "b": 90.0, "p_b": 90.1, "n": 5, "ar": 32.0, "ap": 31.5, "fr": 2.0, "p_fr": 2.1, "actual": "Warning"}, # sl < 40 (-10) -> 90 score (Warning if < 80, but wait...)
+    # --- Warning cases (Warning) ---
+    {"p": 29.0, "g": 50.0, "sl": 80.0, "b": 80.0, "p_b": 80.1, "n": 5, "ar": 29.0, "ap": 28.5, "fr": 2.0, "p_fr": 2.0, "actual": "Good"},
+    {"p": 45.0, "g": 55.0, "sl": 85.0, "b": 85.0, "p_b": 85.5, "n": 5, "ar": 45.0, "ap": 38.5, "fr": 2.0, "p_fr": 2.0, "actual": "Good"},
+    {"p": 35.0, "g": 80.0, "sl": 90.0, "b": 90.0, "p_b": 90.1, "n": 5, "ar": 35.0, "ap": 34.5, "fr": 4.5, "p_fr": 2.0, "actual": "Warning"},
+    {"p": 32.0, "g": 80.0, "sl": 35.0, "b": 90.0, "p_b": 90.1, "n": 5, "ar": 32.0, "ap": 31.5, "fr": 2.0, "p_fr": 2.1, "actual": "Warning"},
     
-    # --- حالات Not Good (خطر) ---
-    {"p": 25.0, "g": 80.0, "sl": 90.0, "b": 90.0, "p_b": 90.1, "n": 5, "ar": 25.0, "ap": 24.5, "fr": 2.0, "p_fr": 2.0, "actual": "Not Good"}, # p < 28 (-45) -> 55 score
-    {"p": 45.0, "g": 80.0, "sl": 90.0, "b": 10.0, "p_b": 20.0, "n": 5, "ar": 10.0, "ap": 10.0, "fr": 2.0, "p_fr": 2.0, "actual": "Not Good"}, # battery low (-20) + discharge (-20) + p > 44 (-15) -> 45 score
+    # --- Danger cases (Not Good) ---
+    {"p": 25.0, "g": 80.0, "sl": 90.0, "b": 90.0, "p_b": 90.1, "n": 5, "ar": 25.0, "ap": 24.5, "fr": 2.0, "p_fr": 2.0, "actual": "Not Good"},
+    {"p": 45.0, "g": 80.0, "sl": 90.0, "b": 10.0, "p_b": 20.0, "n": 5, "ar": 10.0, "ap": 10.0, "fr": 2.0, "p_fr": 2.0, "actual": "Not Good"},
+    {"p": 32.0, "g": 5.0, "sl": 15.0, "b": 90.0, "p_b": 90.1, "n": 5, "ar": 5.0, "ap": 5.0, "fr": 2.0, "p_fr": 2.0, "actual": "Not Good"},
 ]
 
 # -------------------------------------------------------
-# 2. دالة التنبؤ (Sync with Michael's logic in ai_service.py)
+# 2. Prediction Function (Sync with Michael's logic in ai_service.py)
 # -------------------------------------------------------
 def predict_health(case: dict) -> str:
     p, g, sl, b, p_b, n, ar, ap, fr, p_fr = case["p"], case["g"], case["sl"], case["b"], case["p_b"], case["n"], case["ar"], case["ap"], case["fr"], case["p_fr"]
@@ -60,53 +55,75 @@ def predict_health(case: dict) -> str:
     if b < 15.0: score -= 20
     elif b < 25.0: score -= 10
 
-    # تحديد الحالة النهائية (بناءً على عتبات مايكل الجديدة)
+    # Determine final state based on Michael's thresholds
     if score >= 80: return "Good"
     elif score < 70: return "Not Good"
     else: return "Warning"
 
-
 # -------------------------------------------------------
-# 3. تشغيل التقييم
+# 3. Run Evaluation
 # -------------------------------------------------------
-y_true = [c["actual"]    for c in TEST_CASES]
+y_true = [c["actual"] for c in TEST_CASES]
 y_pred = [predict_health(c) for c in TEST_CASES]
 
 labels = ["Good", "Warning", "Not Good"]
 
-accuracy  = accuracy_score(y_true, y_pred)
-precision = precision_score(y_true, y_pred, labels=labels, average="weighted", zero_division=0)
-recall    = recall_score(y_true, y_pred, labels=labels, average="weighted", zero_division=0)
-f1        = f1_score(y_true, y_pred, labels=labels, average="weighted", zero_division=0)
-cm        = confusion_matrix(y_true, y_pred, labels=labels)
-
-# -------------------------------------------------------
-# 4. طباعة النتائج
-# -------------------------------------------------------
-print("=" * 60)
-print("   Med-Guard Intelligence Layer (Michael Final Ver) — Report")
-print("=" * 60)
-print(f"\n  ✅  Accuracy  : {accuracy  * 100:.2f}%")
-print(f"  🎯  Precision : {precision * 100:.2f}%")
-print(f"  📡  Recall    : {recall    * 100:.2f}%")
-print(f"  🏆  F1-Score  : {f1        * 100:.2f}%")
-print(f"\n  📊  Total Test Cases : {len(TEST_CASES)}")
-
+# Pure Python metrics calculation
+total = len(y_true)
 correct = sum(1 for t, p in zip(y_true, y_pred) if t == p)
-print(f"  ✔   Correct Predictions : {correct}")
-print(f"  ✘   Wrong  Predictions  : {len(TEST_CASES) - correct}")
+accuracy = correct / total if total > 0 else 0
+
+metrics = {}
+for label in labels:
+    tp = sum(1 for t, p in zip(y_true, y_pred) if t == label and p == label)
+    fp = sum(1 for t, p in zip(y_true, y_pred) if t != label and p == label)
+    fn = sum(1 for t, p in zip(y_true, y_pred) if t == label and p != label)
+    
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+    support = sum(1 for t in y_true if t == label)
+    
+    metrics[label] = {
+        "precision": precision,
+        "recall": recall,
+        "f1-score": f1,
+        "support": support
+    }
+
+weighted_precision = sum(metrics[lbl]["precision"] * metrics[lbl]["support"] for lbl in labels) / total if total > 0 else 0
+weighted_recall = sum(metrics[lbl]["recall"] * metrics[lbl]["support"] for lbl in labels) / total if total > 0 else 0
+weighted_f1 = sum(metrics[lbl]["f1-score"] * metrics[lbl]["support"] for lbl in labels) / total if total > 0 else 0
+
+# -------------------------------------------------------
+# 4. Print Results
+# -------------------------------------------------------
+print("=" * 60)
+print("   Med-Guard Intelligence Layer - AI Model Accuracy Report")
+print("=" * 60)
+print(f"\n  Accuracy  : {accuracy  * 100:.2f}%")
+print(f"  Precision : {weighted_precision * 100:.2f}%")
+print(f"  Recall    : {weighted_recall    * 100:.2f}%")
+print(f"  F1-Score  : {weighted_f1        * 100:.2f}%")
+print(f"\n  Total Test Cases : {len(TEST_CASES)}")
+print(f"  Correct Predictions : {correct}")
+print(f"  Wrong Predictions  : {len(TEST_CASES) - correct}")
 
 print("\n--- Detailed Classification Report ---")
-print(classification_report(y_true, y_pred, labels=labels, zero_division=0))
+print(f"{'Label':<12}{'Precision':<15}{'Recall':<18}{'F1-Score':<15}{'Support':<10}")
+print("-" * 70)
+for label in labels:
+    m = metrics[label]
+    print(f"{label:<12}{m['precision']*100:<15.2f}%{m['recall']*100:<18.2f}%{m['f1-score']*100:<15.2f}%{m['support']:<10}")
 
 print("\n" + "=" * 60)
 
 # -------------------------------------------------------
-# 5. تفصيل كل حالة
+# 5. Case-by-Case Breakdown
 # -------------------------------------------------------
 print("\n--- Case-by-Case Breakdown ---")
 print(f"{'#':<4}{'Actual':<12}{'Predicted':<12}{'Result'}")
 print("-" * 40)
 for i, (t, p) in enumerate(zip(y_true, y_pred)):
-    icon = "✅" if t == p else "❌"
+    icon = "OK" if t == p else "FAIL"
     print(f"{i+1:<4}{t:<12}{p:<12}{icon}")

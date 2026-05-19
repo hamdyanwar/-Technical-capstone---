@@ -10,3 +10,5 @@ python-jose[cryptography]
 passlib[bcrypt]
 google-generativeai
 python-dotenv
+pyserial
+requests

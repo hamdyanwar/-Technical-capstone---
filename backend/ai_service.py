@@ -94,32 +94,63 @@ def predict_device_health(telemetry_data: List[schemas.Telemetry]) -> dict:
     
     # 5. Resource Levels (Gas Level Prediction using Linear Regression)
     if len(sorted_data) >= 5:
-        from sklearn.linear_model import LinearRegression
-        import numpy as np
-        
-        # Prepare data for regression
-        X_reg = np.array(range(len(sorted_data))).reshape(-1, 1)
-        y_reg = [d.gas_level for d in sorted_data]
-        
-        # Smooth data a bit
-        y_smooth = np.convolve(y_reg, np.ones(3)/3, mode='valid')
-        X_smooth = X_reg[1:-1]
-        
-        if len(y_smooth) >= 3:
-            reg_model = LinearRegression().fit(X_smooth, y_smooth)
-            slope = reg_model.coef_[0]
-            intercept = reg_model.intercept_
+        try:
+            from sklearn.linear_model import LinearRegression
+            import numpy as np
             
-            # Predict when it hits the threshold (e.g., 20%)
-            GAS_THRESHOLD = 20.0
-            if slope < 0:
-                readings_to_empty = (GAS_THRESHOLD - intercept) / slope - len(sorted_data)
-                if readings_to_empty > 0:
-                    insights.append(f"توقع ذكاء اصطناعي: مستوى الغاز سيصل للحد الحرج خلال {int(readings_to_empty)} قراءة تقريباً.")
-                else:
-                    insights.append("تنبيه: مستوى الغاز في نطاق الخطر حالياً.")
-            elif slope > 0.5:
-                insights.append("رصد زيادة غير معتادة في مخزون الغاز (عملية ملء؟)")
+            # Prepare data for regression
+            X_reg = np.array(range(len(sorted_data))).reshape(-1, 1)
+            y_reg = [d.gas_level for d in sorted_data]
+            
+            # Smooth data a bit
+            y_smooth = np.convolve(y_reg, np.ones(3)/3, mode='valid')
+            X_smooth = X_reg[1:-1]
+            
+            if len(y_smooth) >= 3:
+                reg_model = LinearRegression().fit(X_smooth, y_smooth)
+                slope = reg_model.coef_[0]
+                intercept = reg_model.intercept_
+                
+                # Predict when it hits the threshold (e.g., 20%)
+                GAS_THRESHOLD = 20.0
+                if slope < 0:
+                    readings_to_empty = (GAS_THRESHOLD - intercept) / slope - len(sorted_data)
+                    if readings_to_empty > 0:
+                        insights.append(f"توقع ذكاء اصطناعي: مستوى الغاز سيصل للحد الحرج خلال {int(readings_to_empty)} قراءة تقريباً.")
+                    else:
+                        insights.append("تنبيه: مستوى الغاز في نطاق الخطر حالياً.")
+                elif slope > 0.5:
+                    insights.append("رصد زيادة غير معتادة في مخزون الغاز (عملية ملء؟)")
+        except Exception as e:
+            try:
+                # Pure Python fallback for Linear Regression and Moving Average
+                y_reg = [d.gas_level for d in sorted_data]
+                y_smooth = [(y_reg[i-1] + y_reg[i] + y_reg[i+1]) / 3.0 for i in range(1, len(y_reg)-1)]
+                X_smooth = [float(i) for i in range(1, len(y_reg)-1)]
+                
+                n = len(y_smooth)
+                if n >= 3:
+                    sum_x = sum(X_smooth)
+                    sum_y = sum(y_smooth)
+                    sum_xx = sum(x*x for x in X_smooth)
+                    sum_xy = sum(x*y for x, y in zip(X_smooth, y_smooth))
+                    
+                    denom = n * sum_xx - sum_x * sum_x
+                    if abs(denom) > 1e-9:
+                        slope = (n * sum_xy - sum_x * sum_y) / denom
+                        intercept = (sum_y - slope * sum_x) / n
+                        
+                        GAS_THRESHOLD = 20.0
+                        if slope < 0:
+                            readings_to_empty = (GAS_THRESHOLD - intercept) / slope - len(sorted_data)
+                            if readings_to_empty > 0:
+                                insights.append(f"توقع ذكاء اصطناعي: مستوى الغاز سيصل للحد الحرج خلال {int(readings_to_empty)} قراءة تقريباً.")
+                            else:
+                                insights.append("تنبيه: مستوى الغاز في نطاق الخطر حالياً.")
+                        elif slope > 0.5:
+                            insights.append("رصد زيادة غير معتادة في مخزون الغاز (عملية ملء؟)")
+            except Exception as inner_e:
+                pass
 
     if latest.gas_level < 10.0:
         health_score -= 25

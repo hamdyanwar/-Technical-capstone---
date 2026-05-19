@@ -15,17 +15,17 @@ def seed():
 
     # 2. Seed Technicians
     techs = [
-        models.Technician(name="Ahmed Mansour", location="Cairo, Nasr City", price_per_hour="200 EGP/hr", specialty="Medical Imaging", rating=4.9),
-        models.Technician(name="Sarah Williams", location="Maadi", price_per_hour="350 EGP/hr", specialty="Anesthesia Tech", rating=4.8),
-        models.Technician(name="Med-Guard OnCall", location="Remote", price_per_hour="Free", specialty="Diagnostics", rating=5.0)
+        models.Technician(name="م. أحمد منصور", location="القاهرة، مدينة نصر", price_per_hour="200 ج.م/ساعة", specialty="أشعة طبية", rating=4.9),
+        models.Technician(name="م. سارة ويليامز", location="المعادي", price_per_hour="350 ج.م/ساعة", specialty="صيانة أجهزة تخدير", rating=4.8),
+        models.Technician(name="فريق الدعم المناوب", location="عن بعد", price_per_hour="مجاني", specialty="تشخيص ذكي", rating=5.0)
     ]
     db.add_all(techs)
     db.commit()
 
     # 3. Seed Initial Devices
     devices = [
-        models.Device(name="Anesthesia Intel-G7", type="Anesthesia", location="Room 102", status="Active"),
-        models.Device(name="Michael-Vent-ICU2", type="Ventilator", location="ICU-2", status="Active")
+        models.Device(name="أداة التخدير الذكية G7", type="أجهزة تخدير", location="الغرفة 102", status="نشط"),
+        models.Device(name="جهاز تنفس مايكل ICU2", type="جهاز تنفس صناعي", location="العناية المركزة 2", status="نشط")
     ]
     db.add_all(devices)
     db.commit()
