@@ -1,0 +1,2473 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEDICAL ASSISTANT</title>
+    <script src="lib/react.development.js"></script>
+    <script src="lib/react-dom.development.js"></script>
+    <script src="lib/babel.min.js"></script>
+    <script src="lib/tailwindcss.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="lib/lucide.js"></script>
+    <script src="translations.js"></script>
+
+    <script src="lib/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+
+        .hud-border {
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            box-shadow:
+                0 0 15px rgba(99, 102, 241, 0.1),
+                inset 0 0 15px rgba(99, 102, 241, 0.05);
+        }
+
+        .chat-bubble-ai {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .clinical-grid {
+            background-color: #ffffff;
+        }
+
+        .mesh-gradient {
+            background-color: #0f172a;
+            background-image:
+                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(0, 161, 155, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(45, 212, 191, 0.1) 0px, transparent 50%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mesh-gradient::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 70% 50%, rgba(0, 161, 155, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .pulse-thinking {
+            animation: pulse-hud 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse-hud {
+
+            0%,
+            100% {
+                opacity: 0.9;
+                transform: scale(1);
+                filter: brightness(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.995);
+                filter: brightness(1.3);
+            }
+        }
+
+        .scan-line {
+            display: none;
+        }
+
+        .hud-glow {
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .hud-glow:hover {
+            box-shadow: 0 0 40px rgba(99, 102, 241, 0.4);
+            border-color: rgba(99, 102, 241, 0.5);
+        }
+
+        .data-spark {
+            width: 4px;
+            height: 4px;
+            background: #00A19B;
+            border-radius: 2px;
+            position: absolute;
+            pointer-events: none;
+            opacity: 0;
+            animation: spark 3s ease-in-out infinite;
+        }
+
+        @keyframes spark {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 0;
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            80% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(-30px) scale(0);
+                opacity: 0;
+            }
+        }
+
+        .terminal-text {
+            border-right: 2px solid #5E5CE6;
+            animation: blink 0.8s step-end infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                border-color: transparent;
+            }
+        }
+
+
+        .gradient-bg {
+            background-color: #ffffff;
+            min-height: 100vh;
+        }
+
+        .anesthesia-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(30, 110, 115, 0.75);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .anesthesia-bg {
+            background-color: #1e4548;
+            background-image: url('anesthesia_machine.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+
+
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.2);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.4);
+        }
+
+        .story-log {
+            font-family: 'Inter', serif;
+            line-height: 1.6;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .story-log::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(99, 102, 241, 0.05));
+            pointer-events: none;
+        }
+
+        .reasoning-log {
+            font-family: 'Monaco', 'Consolas', monospace;
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+            color: #64748b !important;
+        }
+    </style>
+    <!-- PWA Setup -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js');
+            });
+        }
+    </script>
+</head>
+
+<body class="min-h-screen gradient-bg">
+    <div id="root" class="min-h-screen"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const StatusBadge = ({ status }) => {
+            const colors = {
+                'Good': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                'Warning': 'bg-amber-100 text-amber-700 border-amber-200',
+                'Critical': 'bg-rose-100 text-rose-700 border-rose-200',
+                'Active': 'bg-blue-100 text-blue-700 border-blue-200',
+                'Delivered': 'bg-indigo-100 text-indigo-700 border-indigo-200'
+            };
+            return (
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${colors[status] || colors['Active']}`}>
+                    {status}
+                </span>
+            );
+        };
+
+        // --- AI Logic Utilities ---
+        const linearRegression = (y) => {
+            if (y.length < 2) return { slope: 0, intercept: y[0] || 0 };
+            const x = y.map((_, i) => i);
+            const n = x.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            for (let i = 0; i < n; i++) {
+                sumX += x[i];
+                sumY += y[i];
+                sumXY += x[i] * y[i];
+                sumX2 += x[i] * x[i];
+            }
+            const denom = (n * sumX2 - sumX * sumX);
+            if (denom === 0) return { slope: 0, intercept: sumY / n };
+            const slope = (n * sumXY - sumX * sumY) / denom;
+            const intercept = (sumY - slope * sumX) / n;
+            return { slope, intercept };
+        };
+
+        const rollingAverage = (arr, windowSize) => {
+            if (arr.length === 0) return [];
+            return arr.map((_, i) => {
+                const start = Math.max(0, i - windowSize + 1);
+                const subset = arr.slice(start, i + 1);
+                return subset.reduce((a, b) => a + b, 0) / subset.length;
+            });
+        };
+
+        const DeviceCard = ({ device, health, onUpdate, language }) => {
+            const history = device.history && device.history.length > 0
+                ? device.history
+                : (device.telemetry && device.telemetry.length > 0
+                    ? [...device.telemetry].reverse().map(t => t.pressure)
+                    : []);
+
+            const sodaHistory = device.soda_history && device.soda_history.length > 0
+                ? device.soda_history
+                : (device.telemetry && device.telemetry.length > 0
+                    ? [...device.telemetry].reverse().map(t => t.soda_lime)
+                    : []);
+
+            const gasValue = device.health?.pressure !== undefined && device.health?.pressure !== null
+                ? device.health.pressure
+                : (history.length > 0 ? history[history.length - 1] : null);
+
+            const sodaValue = device.health?.soda_lime !== undefined && device.health?.soda_lime !== null
+                ? device.health.soda_lime
+                : (sodaHistory.length > 0 ? sodaHistory[sodaHistory.length - 1] : null);
+
+            // AI Processing - Gas
+            const smoothData = React.useMemo(() => rollingAverage(history, 5), [history]);
+            const { slope, intercept } = React.useMemo(() => linearRegression(smoothData), [smoothData]);
+
+            // AI Processing - Soda Lime
+            const sodaSmooth = React.useMemo(() => rollingAverage(sodaHistory, 5), [sodaHistory]);
+            const { slope: sSlope, intercept: sIntercept } = React.useMemo(() => linearRegression(sodaSmooth), [sodaSmooth]);
+
+            const THRESHOLD = 45.0;
+            const readingsLeft = slope < 0 ? (THRESHOLD - intercept) / slope - history.length : 0;
+
+            const SODA_THRESHOLD = 45.0;
+            const sodaReadingsLeft = sSlope < 0 ? (SODA_THRESHOLD - sIntercept) / sSlope - sodaHistory.length : 0;
+
+            const gasDatasets = React.useMemo(() => {
+                // Ensure we always have exactly 15 points for a "Full" clinical look (matches Auto Train)
+                let data = history;
+                const targetLen = 15;
+                if (data.length < targetLen && gasValue !== null) {
+                    const base = gasValue;
+                    const trend = (Math.random() - 0.5) * 8;
+                    const paddingLen = targetLen - data.length;
+                    const padding = Array.from({ length: paddingLen }, (_, i) => base - (trend * (paddingLen - i) / paddingLen) + (Math.sin(i) * 0.3));
+                    data = [...padding, ...data];
+                }
+
+                const smooth = rollingAverage(data, 5);
+                const { slope: gS, intercept: gI } = linearRegression(smooth);
+                const aiPred = data.map((_, i) => gS * i + gI);
+
+                return {
+                    raw: data,
+                    smooth: smooth,
+                    ai: aiPred
+                };
+            }, [history, gasValue]);
+
+            const sodaDatasets = React.useMemo(() => {
+                let data = sodaHistory;
+                const targetLen = 15;
+                if (data.length < targetLen && sodaValue !== null) {
+                    const base = sodaValue;
+                    const trend = (Math.random() - 0.5) * 12;
+                    const paddingLen = targetLen - data.length;
+                    const padding = Array.from({ length: paddingLen }, (_, i) => base - (trend * (paddingLen - i) / paddingLen) + (Math.cos(i) * 0.3));
+                    data = [...padding, ...data];
+                }
+
+                const smooth = rollingAverage(data, 5);
+                const { slope: sS, intercept: sI } = linearRegression(smooth);
+                const aiPred = data.map((_, i) => sS * i + sI);
+
+                return {
+                    raw: data,
+                    smooth: smooth,
+                    ai: aiPred
+                };
+            }, [sodaHistory, sodaValue]);
+
+            return (
+                <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-xl border border-white/50 group transition-all duration-500 hover:shadow-2xl">
+                    <div className="flex justify-between items-start mb-8">
+                        <div className={language === 'ar' ? 'text-right' : 'text-left'} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                            <h3 className="text-2xl font-black text-[#1e293b] mb-1">{device.name}</h3>
+                            <p className="text-xs text-[#4F46E5] font-bold opacity-70">
+                                {language === 'ar' ? `${device.type} • ${device.location.replace('Room', 'الغرفة')}` : `${device.type} • ${device.location}`}
+                            </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-3">
+                            <div className="flex gap-1.5">
+                                <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)] animate-pulse"></div>
+                                <div className="w-3 h-3 rounded-full bg-gray-200"></div>
+                            </div>
+                            <span className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-indigo-100">
+                                {language === 'ar' ? 'نشيط' : 'Active'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="space-y-8">
+                        <div>
+                            <div className="flex justify-between items-center mb-3">
+                                <span className="text-[11px] font-black text-indigo-400 uppercase tracking-widest">{language === 'ar' ? 'مؤشر الصحة' : 'Health Score'}</span>
+                                <span className="text-lg font-black text-emerald-600 tracking-tighter">{device.health?.health_score || 100}%</span>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden p-0.5">
+                                <div
+                                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-1000"
+                                    style={{ width: `${device.health?.health_score || 100}%` }}
+                                ></div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            {/* Gas Sensor */}
+                            <div
+                                onClick={() => onUpdate(device, 'gas')}
+                                className="p-2 flex flex-col cursor-pointer transition-all active:scale-95 group/val relative border-b border-white/10 pb-6"
+                            >
+                                <p className="text-[12px] font-black text-blue-500 mb-2" dir="rtl">{language === 'ar' ? 'متوسط نسبة الغاز الجيد' : 'Medical Gas Pressure'}</p>
+                                <div className="flex justify-end items-baseline gap-2 mb-2" dir="rtl">
+                                    <span className="text-4xl font-black text-[#1e293b] tracking-tighter group-hover/val:text-blue-400 transition-colors">
+                                        {gasValue !== null ? gasValue.toFixed(1) : '--.-'}
+                                    </span>
+                                    <span className="text-[11px] font-bold text-[#1e293b] opacity-50">
+                                        {language === 'ar' ? 'رطل لكل بوصة مربعة' : 'PSI'}
+                                    </span>
+                                </div>
+                                <div className="h-20 mt-auto relative z-0">
+                                    <SupplyChart type="gas" datasets={gasDatasets} minimal={true} />
+                                </div>
+                            </div>
+
+                            {/* Soda Lime Sensor */}
+                            <div
+                                onClick={() => onUpdate(device, 'soda')}
+                                className="p-2 flex flex-col cursor-pointer transition-all active:scale-95 group/val relative border-b border-white/10 pb-6"
+                            >
+                                <p className="text-[12px] font-black text-blue-500 mb-2" dir="rtl">{language === 'ar' ? 'كفاءة الجير الصودا' : 'Soda Lime Efficiency'}</p>
+                                <div className="flex justify-end items-baseline gap-2 mb-2" dir="rtl">
+                                    <span className="text-4xl font-black text-[#1e293b] tracking-tighter group-hover/val:text-blue-400 transition-colors">
+                                        {sodaValue !== null ? sodaValue.toFixed(1) : '--.-'}
+                                    </span>
+                                    <span className="text-[11px] font-bold text-[#1e293b] opacity-50">%</span>
+                                </div>
+                                <div className="h-20 mt-auto relative z-0">
+                                    <SupplyChart type="soda" datasets={sodaDatasets} minimal={true} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 space-y-4 bg-gray-50/80 p-6 rounded-[2rem] border border-indigo-50">
+                            <div className="flex items-center justify-between border-b border-indigo-100/50 pb-3">
+                                <h4 className="text-[11px] font-black text-indigo-900 uppercase tracking-widest flex items-center gap-2">
+                                    <i data-lucide="file-text" className="w-4 h-4 text-indigo-500"></i>
+                                    {language === 'ar' ? 'الغاز — تقرير AI' : 'Gas — AI Report'}
+                                </h4>
+                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${gasValue < 49.0 ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                    {language === 'ar' ? (gasValue < 49.0 ? '🚨 إنذار!!' : '✅ مستقر') : (gasValue < 49.0 ? '🚨 ALERT' : '✅ STABLE')}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 pt-2">
+                                <div className="space-y-1">
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{language === 'ar' ? 'القراءة اللحظية' : 'Momentary Reading'}</p>
+                                    <p className="text-sm font-black text-[#1e293b]">{gasValue !== null ? `${gasValue.toFixed(2)} PSI` : '--.-'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{language === 'ar' ? 'معدل التغير' : 'Change Rate'}</p>
+                                    <p className={`text-sm font-black ${slope < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                        {slope < 0 ? '📉 ' : '📈 '}{(slope * 100).toFixed(2)}%
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="pt-3 border-t border-indigo-100/50">
+                                <p className="text-[10px] font-bold text-gray-600 leading-relaxed italic">
+                                    {slope < 0
+                                        ? (language === 'ar'
+                                            ? `🔮 التوقع: الغاز قد ينتهي بعد ${Math.max(0, Math.floor(readingsLeft))} قراءة إضافية.`
+                                            : `🔮 Prediction: Gas may deplete after ${Math.max(0, Math.floor(readingsLeft))} more readings.`)
+                                        : (language === 'ar'
+                                            ? "🔮 التوقع: الاستهلاك غير منتظم حالياً (القراءات تزيد ولا تنقص)."
+                                            : "🔮 Prediction: Consumption is irregular (readings are increasing.)")
+                                    }
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 space-y-4 bg-gray-50/80 p-6 rounded-[2rem] border border-indigo-50">
+                            <div className="flex items-center justify-between border-b border-indigo-100/50 pb-3">
+                                <h4 className="text-[11px] font-black text-indigo-900 uppercase tracking-widest flex items-center gap-2">
+                                    <i data-lucide="file-text" className="w-4 h-4 text-blue-500"></i>
+                                    {language === 'ar' ? 'الصودالين — تقرير AI' : 'Soda Lime — AI Report'}
+                                </h4>
+                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${sodaValue < 49.0 ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                    {language === 'ar' ? (sodaValue < 49.0 ? '🚨 إنذار!!' : '✅ مستقر') : (sodaValue < 49.0 ? '🚨 ALERT' : '✅ STABLE')}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 pt-2">
+                                <div className="space-y-1">
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{language === 'ar' ? 'القراءة اللحظية' : 'Momentary Reading'}</p>
+                                    <p className="text-sm font-black text-[#1e293b]">{sodaValue !== null ? `${sodaValue.toFixed(2)}%` : '--.-'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{language === 'ar' ? 'معدل التغير' : 'Change Rate'}</p>
+                                    <p className={`text-sm font-black ${sSlope < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                        {sSlope < 0 ? '📉 ' : '📈 '}{(sSlope * 100).toFixed(2)}%
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="pt-3 border-t border-indigo-100/50">
+                                <p className="text-[10px] font-bold text-gray-600 leading-relaxed italic">
+                                    {sSlope < 0
+                                        ? (language === 'ar'
+                                            ? `🔮 التوقع: الصودالين قد ينتهي بعد ${Math.max(0, Math.floor(sodaReadingsLeft))} قراءة إضافية.`
+                                            : `🔮 Prediction: Soda Lime may deplete after ${Math.max(0, Math.floor(sodaReadingsLeft))} more readings.`)
+                                        : (language === 'ar'
+                                            ? "🔮 التوقع: الاستهلاك غير منتظم حالياً (القراءات تزيد ولا تنقص)."
+                                            : "🔮 Prediction: Consumption is irregular (readings are increasing.)")
+                                    }
+                                </p>
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+            );
+        };
+
+        const SupplyChart = ({ type, data, datasets, minimal = false }) => {
+            const chartRef = React.useRef(null);
+            const chartInstance = React.useRef(null);
+
+            useEffect(() => {
+                if (chartInstance.current) {
+                    chartInstance.current.destroy();
+                }
+
+                const ctx = chartRef.current.getContext('2d');
+
+                const finalDatasets = datasets ? [
+                    {
+                        label: 'Raw',
+                        data: datasets.raw,
+                        borderColor: '#94a3b8',
+                        backgroundColor: 'transparent',
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        tension: 0.5
+                    },
+                    {
+                        label: 'Filtered',
+                        data: datasets.smooth,
+                        borderColor: '#4F46E5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        fill: true,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.5
+                    },
+                    {
+                        label: 'AI Prediction',
+                        data: datasets.ai,
+                        borderColor: '#1e293b',
+                        borderDash: [5, 5],
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.5
+                    }
+                ] : [{
+                    label: type === 'gas' ? 'Medical Gas (PSI)' : 'Soda Lime (%)',
+                    data: data,
+                    borderColor: '#4F46E5',
+                    backgroundColor: 'rgba(79, 70, 229, 0.05)',
+                    fill: true,
+                    tension: 0.5,
+                    pointRadius: minimal ? 0 : 4,
+                    pointBackgroundColor: '#fff',
+                    borderWidth: minimal ? 2.5 : 3
+                }];
+
+                chartInstance.current = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: Array.from({ length: (datasets ? datasets.raw.length : data.length) }, (_, i) => i),
+                        datasets: finalDatasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                display: true,
+                                min: 0,
+                                max: 100, // Fixed range so changes are physically visible
+                                grid: {
+                                    display: true,
+                                    color: 'rgba(0, 0, 0, 0.08)',
+                                    drawBorder: false
+                                },
+                                ticks: { display: false }
+                            },
+                            x: {
+                                display: true,
+                                grid: { display: false },
+                                ticks: { display: false }
+                            }
+                        }
+                    }
+                });
+
+                return () => {
+                    if (chartInstance.current) chartInstance.current.destroy();
+                };
+            }, [data, datasets, type, minimal]);
+
+            return <canvas ref={chartRef} />;
+        };
+
+        const NavItem = ({ id, label, icon, active, onClick }) => (
+            <button
+                onClick={() => onClick(id)}
+                className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl font-bold transition-all duration-300 ${active ? 'bg-[#4F46E5] text-white shadow-lg shadow-indigo-500/40' : 'text-slate-300 font-bold hover:bg-slate-800/50 hover:text-blue-400'}`}
+            >
+                <i data-lucide={icon} className="w-5 h-5"></i>
+                <span className="text-sm">{label}</span>
+            </button>
+        );
+
+        const parseMD = (text) => {
+            if (!text) return "";
+            try {
+                let clean = text;
+                // Handle [THE_STORY_LOG]
+                clean = clean.replace(/\[THE_STORY_LOG\](.*?)\[\/THE_STORY_LOG\]/gs, (match, p1) => {
+                    return `<div class="story-log bg-indigo-50/50 border-l-4 border-indigo-500 p-4 my-2 italic text-indigo-900 rounded-r-xl shadow-sm"><div class="text-[10px] font-black uppercase tracking-widest mb-1 text-indigo-400">📜 سجل الحكايات (The Chronicles)</div>${p1.trim()}</div>`;
+                });
+                // Handle [REASONING]
+                clean = clean.replace(/\[REASONING\](.*?)\[\/REASONING\]/gs, (match, p1) => {
+                    return `<div class="reasoning-log bg-slate-50 border border-slate-200 p-3 my-2 text-xs text-slate-500 rounded-lg"><div class="font-bold opacity-50 mb-1">🧠 Technical Logic</div>${p1.trim()}</div>`;
+                });
+
+                return typeof window.marked === 'function' ? window.marked(clean) : (window.marked.parse ? window.marked.parse(clean) : clean);
+            } catch (e) {
+                return text;
+            }
+        };
+
+
+        const App = () => {
+            const chatEndRef = React.useRef(null);
+            const BACKEND_URL = 'http://localhost:8000';
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+            const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+            const [devices, setDevices] = useState([]);
+            const [notifications, setNotifications] = useState([]);
+            const [technicians, setTechnicians] = useState(() => {
+                try {
+                    const saved = localStorage.getItem('medguard_technicians');
+                    return saved ? JSON.parse(saved) : [];
+                } catch (e) {
+                    return [];
+                }
+            });
+
+            React.useEffect(() => {
+                if (technicians && technicians.length > 0) {
+                    try {
+                        localStorage.setItem('medguard_technicians', JSON.stringify(technicians));
+                    } catch (e) { }
+                }
+            }, [technicians]);
+            const [chatMessages, setChatMessages] = useState([]);
+            const [input, setInput] = useState('');
+            const [lastInterruptId, setLastInterruptId] = useState(null);
+            const [showAIPopup, setShowAIPopup] = useState(false);
+            const [popupMessage, setPopupMessage] = useState('');
+
+            const [orderData, setOrderData] = useState({ equipment: '', department: '', priority: 'Normal' });
+            const [showOrderModal, setShowOrderModal] = useState(false);
+            const [orderStep, setOrderStep] = useState(1);
+
+            const [showRegisterModal, setShowRegisterModal] = useState(false);
+            const [showTechModal, setShowTechModal] = useState(false);
+            const [showAddTechModal, setShowAddTechModal] = useState(false);
+            const [selectedTech, setSelectedTech] = useState(null);
+            const [newTechData, setNewTechData] = useState({ name: '', phone: '', location: '', price: '' });
+            const [showTelemetryModal, setShowTelemetryModal] = useState(false);
+            const [updateType, setUpdateType] = useState('gas');
+            const [selectedDevice, setSelectedDevice] = useState(null);
+            const [newTelemetry, setNewTelemetry] = useState({ pressure: '', flow_rate: '', gas_level: '', battery_level: '' });
+            const [newDeviceData, setNewDeviceData] = useState({ name: '', location: '', type: 'Anesthesia Machine', installDate: new Date().toISOString().split('T')[0], registerTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) });
+            const [loginTime, setLoginTime] = useState('');
+
+            const [language, setLanguage] = useState(localStorage.getItem('app_lang') || 'ar');
+            const [showLangDropdown, setShowLangDropdown] = useState(false);
+
+            React.useEffect(() => {
+                localStorage.setItem('app_lang', language);
+                document.documentElement.lang = language;
+                document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+            }, [language]);
+
+            const t = (key) => {
+                if (window.t) {
+                    return window.t(key, language);
+                }
+                return key;
+            };
+
+            const [techSearch, setTechSearch] = useState('');
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [loginData, setLoginData] = useState({ name: '', role: '', hospitalCode: '', hospitalName: '' });
+            const [errors, setErrors] = useState({});
+            const [userData, setUserData] = useState({ name: '', phone: '', specialty: '' });
+            const [showHelpModal, setShowHelpModal] = useState(false);
+            const [existingSession, setExistingSession] = useState(null);
+            const [sessionChecked, setSessionChecked] = useState(false);
+            const [isSystemOn, setIsSystemOn] = useState(true);
+
+            const jobRoles = [
+                'مهندس أجهزة طبية',
+                'مهندس أجهزة تخدير',
+                'طبيب تخدير',
+                'فني صيانة أجهزة طبية',
+                'مدير مستشفى',
+                'مختبراتي طبي'
+            ];
+
+
+            const handleLogin = () => {
+                const newErrors = {};
+                const nameVal = loginData.name.trim();
+                const hospitalVal = loginData.hospitalName.trim();
+
+                if (!nameVal) {
+                    newErrors.name = t('الاسم مطلوب');
+                } else if (!/^[\u0600-\u06FFa-zA-Z\s'.]+$/.test(nameVal)) {
+                    newErrors.name = t('يجب أن يحتوي على حروف فقط');
+                } else if (nameVal.length < 3) {
+                    newErrors.name = t('الاسم قصير جداً');
+                }
+                if (!loginData.role) {
+                    newErrors.role = t('اختر وظيفتك من القائمة');
+                }
+                if (!/^\d{3}$/.test(loginData.hospitalCode.trim())) {
+                    newErrors.hospitalCode = t('يجب أن يكون 3 أرقام');
+                }
+                if (!hospitalVal) {
+                    newErrors.hospitalName = t('اسم المستشفى مطلوب');
+                } else if (!/^[\u0600-\u06FFa-zA-Z\s\-]+$/.test(hospitalVal)) {
+                    newErrors.hospitalName = t('يجب أن يحتوي على حروف فقط');
+                } else if (hospitalVal.length < 4) {
+                    newErrors.hospitalName = t('الاسم قصير جداً');
+                }
+
+                if (Object.keys(newErrors).length > 0) {
+                    setErrors(newErrors);
+                    return;
+                }
+                const session = { name: loginData.name, role: loginData.role, hospitalCode: loginData.hospitalCode, hospitalName: loginData.hospitalName };
+                localStorage.setItem('medguard_session', JSON.stringify(session));
+                setExistingSession(session);
+                setUserData({ name: loginData.name, phone: '', specialty: loginData.role });
+                setLoginTime(new Date().toLocaleTimeString(language === 'ar' ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' }));
+                
+                const welcomeMsg = language === 'ar'
+                    ? `تم تسجيل الدخول بنجاح | الاسم: ${loginData.name} | الوظيفة: ${t(loginData.role)} | المستشفى: ${loginData.hospitalName} | الكود: ${window.formatNumber ? window.formatNumber(loginData.hospitalCode, language) : loginData.hospitalCode}`
+                    : `Login successful | Name: ${loginData.name} | Role: ${t(loginData.role)} | Hospital: ${loginData.hospitalName} | Code: ${window.formatNumber ? window.formatNumber(loginData.hospitalCode, language) : loginData.hospitalCode}`;
+                
+                setNotifications(prev => [{
+                    id: Date.now(),
+                    message: welcomeMsg,
+                    timestamp: new Date().toISOString(),
+                    receiver_type: 'Doctor',
+                    severity: 'info',
+                    is_read: false
+                }, ...prev]);
+                setIsLoggedIn(true);
+                setErrors({});
+            };
+
+
+
+
+
+            useEffect(() => {
+                const session = localStorage.getItem('medguard_session');
+                if (session) {
+                    try {
+                        const parsed = JSON.parse(session);
+                        setExistingSession(parsed);
+                    } catch (e) {
+                        localStorage.removeItem('medguard_session');
+                    }
+                }
+                setSessionChecked(true);
+            }, []);
+
+            const handleContinueSession = () => {
+                if (existingSession) {
+                    setUserData({ name: existingSession.name, phone: '', specialty: existingSession.role });
+                    setLoginData(existingSession);
+                    setLoginTime(new Date().toLocaleTimeString(language === 'ar' ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' }));
+                    setIsLoggedIn(true);
+                    setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
+                }
+            };
+
+            const handleClearSession = () => {
+                localStorage.removeItem('medguard_session');
+                setExistingSession(null);
+            };
+
+            const renderSessionChoice = () => (
+                <div className="anesthesia-bg min-h-screen flex items-center justify-center p-8 relative" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                    <div className="anesthesia-overlay"></div>
+                    <div className="w-full max-w-lg relative z-10">
+                        <div className="text-center mb-12">
+                            <div className="w-20 h-20 bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl">
+                                <img src="logo_v4.png" alt="Logo" className="w-14 h-14 object-contain drop-shadow-lg" />
+                            </div>
+                            <h1 className="text-4xl font-black text-gray-900 drop-shadow-sm mb-2">{t("Welcome Back")}</h1>
+                        </div>
+
+                        <div className="bg-white/90 backdrop-blur-3xl rounded-[3rem] border border-gray-100 shadow-[0_20px_60px_rgba(79,70,229,0.1)] p-10 space-y-6">
+                            <button
+                                onClick={handleContinueSession}
+                                className="w-full py-6 bg-[#4F46E5] hover:bg-indigo-600 text-white rounded-2xl font-black text-lg shadow-2xl shadow-indigo-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
+                                <i data-lucide="play" className="w-6 h-6"></i>
+                                {t("استكمال بي الحساب القديم")}
+                            </button>
+
+                            <button
+                                onClick={handleClearSession}
+                                className="w-full py-5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-2xl font-black text-sm border border-rose-100 transition-all flex items-center justify-center gap-3">
+                                <i data-lucide="log-out" className="w-5 h-5"></i>
+                                {t("تسجيل الخروج وبدء جلسة جديدة")}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+
+
+            const renderLogin = () => {
+                const err = errors;
+                const fieldBorder = (key) => err[key]
+                    ? 'border-rose-500/80 shadow-[0_0_12px_rgba(244,63,94,0.3)] bg-rose-500/5'
+                    : 'border-white/10 bg-white/10 focus-within:border-[#4F46E5]/70';
+
+                const FieldError = ({ name }) => err[name] ? (
+                    <div className="flex items-center gap-1.5 mt-2 mr-1 animate-in slide-in-from-top-1 duration-200">
+                        <i data-lucide="alert-circle" className="w-3.5 h-3.5 text-rose-400 shrink-0"></i>
+                        <span className="text-rose-300 text-[11px] font-black">يوجد خطأ — {err[name]}</span>
+                    </div>
+                ) : null;
+
+                return (
+                    <div className="anesthesia-bg min-h-screen flex items-center justify-center p-8 relative" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                        <div className="anesthesia-overlay"></div>
+                        <div className="w-full max-w-lg relative z-10">
+                            <div className="text-center mb-12">
+                                <div className="w-48 h-48 flex items-center justify-center mx-auto mb-2">
+                                    <img src="logo_v4.png" alt="Logo" className="w-full h-full object-contain" />
+                                </div>
+                                <h1 className="text-4xl font-black text-gray-900 drop-shadow-md mb-4 tracking-tighter mt-2">{t("system_name")}</h1>
+                            </div>
+
+                            <div className="bg-white/90 backdrop-blur-3xl rounded-[3rem] border border-gray-100 shadow-[0_20px_60px_rgba(79,70,229,0.1)] p-10">
+                                <h2 className="text-xl font-black text-gray-900 mb-2">{t("تسجيل الدخول")}</h2>
+                                <p className="text-gray-500 text-xs font-bold mb-8">{t("أدخل بياناتك للوصول إلى لوحة التحكم")}</p>
+
+                                <div className="space-y-5">
+
+                                    {/* Name */}
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("الاسم كاملاً")}</label>
+                                        <div className={`flex items-center gap-3 border rounded-2xl px-5 py-4 transition-all duration-300 ${fieldBorder('name')}`}>
+                                            <i data-lucide="user" className={`w-4 h-4 shrink-0 ${err.name ? 'text-rose-400' : 'text-gray-400'}`}></i>
+                                            <input
+                                                type="text"
+                                                placeholder={t("مثال: م. أحمد محمد")}
+                                                value={loginData.name}
+                                                onChange={e => { setLoginData({ ...loginData, name: e.target.value }); setErrors({ ...errors, name: '' }); }}
+                                                className="bg-transparent text-gray-800 placeholder-gray-300 text-sm font-bold w-full outline-none"
+                                            />
+                                        </div>
+                                        <FieldError name="name" />
+                                    </div>
+
+                                    {/* Job Role - Dropdown */}
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("الوظيفة / التخصص")}</label>
+                                        <div className={`flex items-center gap-3 border rounded-2xl px-5 py-4 transition-all duration-300 ${fieldBorder('role')}`}>
+                                            <i data-lucide="stethoscope" className={`w-4 h-4 shrink-0 ${err.role ? 'text-rose-400' : 'text-gray-400'}`}></i>
+                                            <select
+                                                value={loginData.role}
+                                                onChange={e => { setLoginData({ ...loginData, role: e.target.value }); setErrors({ ...errors, role: '' }); }}
+                                                className="bg-transparent text-sm font-bold w-full outline-none cursor-pointer appearance-none text-gray-800"
+                                            >
+                                                <option value="" disabled style={{ background: 'white', color: '#94a3b8' }}>{t("اختر وظيفتك...")}</option>
+                                                {jobRoles.map(r => (
+                                                    <option key={r} value={r} style={{ background: 'white', color: '#1e293b' }}>{t(r)}</option>
+                                                ))}
+                                            </select>
+                                            <i data-lucide="chevron-down" className="w-4 h-4 text-gray-400 shrink-0"></i>
+                                        </div>
+                                        <FieldError name="role" />
+                                    </div>
+
+                                    {/* Hospital Code + Name */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("كود المستشفى (3 أرقام)")}</label>
+                                            <div className={`flex items-center gap-3 border rounded-2xl px-5 py-4 transition-all duration-300 ${fieldBorder('hospitalCode')}`}>
+                                                <i data-lucide="hash" className={`w-4 h-4 shrink-0 ${err.hospitalCode ? 'text-rose-400' : 'text-gray-400'}`}></i>
+                                                <input
+                                                    type="text"
+                                                    placeholder={t("مثال: 401")}
+                                                    maxLength={3}
+                                                    value={loginData.hospitalCode}
+                                                    onChange={e => { setLoginData({ ...loginData, hospitalCode: e.target.value.replace(/\D/g, '') }); setErrors({ ...errors, hospitalCode: '' }); }}
+                                                    className="bg-transparent text-gray-800 placeholder-gray-300 text-sm font-black w-full outline-none tracking-widest"
+                                                />
+                                            </div>
+                                            <FieldError name="hospitalCode" />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("اسم المستشفى")}</label>
+                                            <div className={`flex items-center gap-3 border rounded-2xl px-5 py-4 transition-all duration-300 ${fieldBorder('hospitalName')}`}>
+                                                <i data-lucide="hospital" className={`w-4 h-4 shrink-0 ${err.hospitalName ? 'text-rose-400' : 'text-gray-400'}`}></i>
+                                                <input
+                                                    type="text"
+                                                    placeholder={t("مثال: مستشفى القاهرة")}
+                                                    value={loginData.hospitalName}
+                                                    onChange={e => { setLoginData({ ...loginData, hospitalName: e.target.value }); setErrors({ ...errors, hospitalName: '' }); }}
+                                                    className="bg-transparent text-gray-800 placeholder-gray-300 text-sm font-bold w-full outline-none"
+                                                />
+                                            </div>
+                                            <FieldError name="hospitalName" />
+                                        </div>
+                                    </div>
+
+                                    {/* Submit */}
+                                    <button
+                                        onClick={handleLogin}
+                                        translate="no"
+                                        className="w-full py-5 bg-[#4F46E5] hover:bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-2xl shadow-indigo-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 mt-2">
+                                        <i data-lucide="log-in" className="w-5 h-5"></i>
+                                        {t("تسجيل الدخول")}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <p className="text-center text-white/30 text-[10px] font-bold mt-8 uppercase tracking-widest">Anesthesia Device Management System © 2025</p>
+                        </div>
+                    </div>
+                );
+            };
+
+            const filteredTechnicians = technicians.filter(t =>
+                (t.name || '').toLowerCase().includes(techSearch.toLowerCase()) ||
+                (t.location || '').toLowerCase().includes(techSearch.toLowerCase()) ||
+                (t.specialty || '').toLowerCase().includes(techSearch.toLowerCase())
+            );
+
+
+
+
+            const handleRegisterSubmit = async () => {
+                if (!newDeviceData.name) {
+                    alert(language === 'ar' ? "يرجى إدخال اسم الجهاز." : "Please enter the device name.");
+                    return;
+                }
+
+                const installDate = new Date(newDeviceData.installDate);
+                const nextCheckDate = new Date(installDate);
+                nextCheckDate.setMonth(nextCheckDate.getMonth() + 3);
+                const nextCheckStr = nextCheckDate.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US');
+
+                const successMsg = language === 'ar' 
+                    ? `تم التسجيل بنجاح لـ ${newDeviceData.name}. موعد الفحص الدوري القادم: ${nextCheckStr}`
+                    : `Registration Successful for ${newDeviceData.name}! Next periodic check: ${nextCheckStr}`;
+
+                try {
+                    const response = await fetch('http://localhost:8000/devices/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: newDeviceData.name,
+                            type: newDeviceData.type,
+                            location: newDeviceData.location,
+                            status: "Active",
+                            created_at: installDate.toISOString()
+                        })
+                    });
+                    if (response.ok) {
+                        setShowRegisterModal(false);
+                        fetchData();
+                        setNotifications(prev => [{
+                            id: Date.now(),
+                            message: successMsg,
+                            timestamp: new Date().toISOString(),
+                            receiver_type: 'Technician',
+                            is_read: false
+                        }, ...prev]);
+                    }
+                } catch (err) {
+                    // Fallback for demo - Check if device with same name exists
+                    setDevices(prev => {
+                        const existingIdx = prev.findIndex(d => d.name.toLowerCase() === newDeviceData.name.toLowerCase());
+                        if (existingIdx > -1) {
+                            const updated = [...prev];
+                            updated[existingIdx] = {
+                                ...updated[existingIdx],
+                                location: newDeviceData.location,
+                                created_at: installDate.toISOString()
+                            };
+                            return updated;
+                        } else {
+                            return [...prev, {
+                                id: Date.now(),
+                                name: newDeviceData.name,
+                                location: newDeviceData.location,
+                                type: newDeviceData.type,
+                                status: "Active",
+                                created_at: installDate.toISOString()
+                            }];
+                        }
+                    });
+
+                    setNotifications(prev => [{
+                        id: Date.now(),
+                        message: successMsg,
+                        timestamp: new Date().toISOString(),
+                        receiver_type: 'Technician',
+                        is_read: false
+                    }, ...prev]);
+
+                    setShowRegisterModal(false);
+                }
+            };
+
+            const handleRegisterTech = async () => {
+                if (!newTechData.name.trim()) {
+                    alert(language === 'ar' ? "يرجى إدخال اسم الفني." : "Please enter technician name.");
+                    return;
+                }
+                if (!newTechData.phone.trim()) {
+                    alert(language === 'ar' ? "يرجى إدخال رقم هاتف الفني." : "Please enter technician phone number.");
+                    return;
+                }
+                if (!newTechData.price.trim()) {
+                    alert(language === 'ar' ? "يرجى إدخال سعر خدمة الفني." : "Please enter technician service price.");
+                    return;
+                }
+
+                const successMsg = language === 'ar' 
+                    ? `تم تسجيل الفني ${newTechData.name} بنجاح!`
+                    : `Technician ${newTechData.name} successfully registered!`;
+
+                try {
+                    const response = await fetch('http://localhost:8000/technicians/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: newTechData.name,
+                            location: newTechData.phone + "|||" + newTechData.location,
+                            price_per_hour: newTechData.price,
+                            specialty: newTechData.specialty || 'أجهزة طبية',
+                            rating: 5.0
+                        })
+                    });
+                    if (response.ok) {
+                        setShowAddTechModal(false);
+                        fetchData();
+                        setNotifications(prev => [{
+                            id: Date.now(),
+                            message: successMsg,
+                            timestamp: new Date().toISOString(),
+                            receiver_type: 'Doctor',
+                            is_read: false
+                        }, ...prev]);
+                        setNewTechData({ name: '', phone: '', location: '', price: '', specialty: 'أجهزة طبية' });
+                    }
+                } catch (err) {
+                    // Local fallback
+                    setTechnicians(prev => [...prev, {
+                        id: Date.now(),
+                        name: newTechData.name,
+                        location: newTechData.phone + "|||" + newTechData.location,
+                        price_per_hour: newTechData.price,
+                        specialty: newTechData.specialty || 'أجهزة طبية',
+                        rating: 5.0
+                    }]);
+                    setNotifications(prev => [{
+                        id: Date.now(),
+                        message: successMsg,
+                        timestamp: new Date().toISOString(),
+                        receiver_type: 'Doctor',
+                        is_read: false
+                    }, ...prev]);
+                    setShowAddTechModal(false);
+                    setNewTechData({ name: '', phone: '', location: '', price: '', specialty: 'أجهزة طبية' });
+                }
+            };
+
+
+
+
+
+            const fetchData = async () => {
+                try {
+                    const [devRes, techRes, notifRes] = await Promise.all([
+                        fetch('http://localhost:8000/devices/'),
+                        fetch('http://localhost:8000/technicians/'),
+                        fetch('http://localhost:8000/notifications/')
+                    ]);
+                    if (!devRes.ok) throw new Error("Backend offline");
+                    const devData = await devRes.json();
+                    const techData = await techRes.json();
+                    const notifData = await notifRes.json();
+
+                    setDevices(devData);
+                    const dummyNames = ["Ahmed Mansour", "Sarah Williams", "م. أحمد منصور", "م. سارة ويليامز", "فريق الدعم المناوب"];
+                    const nonDummyTechs = techData.filter(t => !dummyNames.includes(t.name));
+                    setTechnicians(prev => {
+                        const merged = [...nonDummyTechs];
+                        (prev || []).forEach(p => {
+                            if (p.id > 1000000000000 && !merged.some(m => m.name === p.name)) {
+                                merged.push(p);
+                            }
+                        });
+                        return merged;
+                    });
+                    // Only update notifications if backend actually has data, otherwise keep local ones
+                    if (notifData && notifData.length > 0) {
+                        setNotifications(prev => {
+                            const combined = [...notifData, ...prev.filter(p => p.id > 1000000000000)]; // Keep recent local ones
+                            return combined.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 50);
+                        });
+                    }
+
+                    // Proactive AI interruption check
+                    const criticalNotif = notifData.find(n => n.message.toLowerCase().includes('critical') || n.message.toLowerCase().includes('abnormal') || n.message.includes('20%') || n.message.includes('10%'));
+                    if (criticalNotif && criticalNotif.id !== lastInterruptId) {
+                        setPopupMessage(criticalNotif.message);
+                        setShowAIPopup(true);
+                        setLastInterruptId(criticalNotif.id);
+                    }
+                } catch (error) {
+                    console.error("Fetch failed, using demo fallback data");
+                    setDevices(prev => prev.length > 0 ? prev : [
+                        { id: 1, name: "Minray", status: "Active", location: "Room 102", type: "Anesthesia Machine" },
+                        { id: 2, name: "GE", status: "Active", location: "Room 103", type: "Ventilator" }
+                    ]);
+                    setNotifications(prev => {
+                        if (prev.length > 2) return prev; // Keep our generated sensor messages
+                        return [
+                            { id: 1, message: "Room 103: Pressure sensor baseline showing abnormal growth.", receiver_type: "Technician", timestamp: new Date().toISOString(), is_read: true },
+                            { id: 2, message: "ICU-2: Oxygen supply pressure at 26 PSI.", receiver_type: "Doctor", timestamp: new Date().toISOString(), is_read: true }
+                        ];
+                    });
+                    setTechnicians(prev => {
+                        if (prev && prev.length > 0) return prev;
+                        try {
+                            const saved = localStorage.getItem('medguard_technicians');
+                            return saved ? JSON.parse(saved) : [];
+                        } catch (e) {
+                            return [];
+                        }
+                    });
+                }
+            };
+
+            // Monitor levels and generate alerts
+            useEffect(() => {
+                const checkThresholds = () => {
+                    const newAlerts = [];
+                    devices.forEach(device => {
+                        // In a real app, these values would come from the device object. 
+                        // For the demo, we simulate them if they don't exist, similar to how DeviceCard does it.
+                        const gas_level = device.health?.gas_level || parseFloat((30 + Math.random() * 5).toFixed(1));
+                        const soda_lime = device.health?.soda_lime || parseFloat((80 + Math.random() * 10).toFixed(1));
+
+                        const thresholds = [10, 20, 30, 40];
+
+                        thresholds.forEach(threshold => {
+                            // Check Gas (assuming PSI, but checking percentage for consistency with request, let's treat it as a % of max ~50 PSI)
+                            // Or better yet, interpret the user request as % for both if they meant percentage.
+                            // Let's use the raw value as percentage for the alert logic if it drops below threshold.
+                            if (gas_level <= threshold && gas_level > threshold - 5) {
+                                newAlerts.push({
+                                    id: Date.now() + Math.random(),
+                                    message: `${device.name} (${device.location}): Gas level has dropped to ${threshold}%!`,
+                                    receiver_type: threshold <= 20 ? 'Doctor' : 'Technician',
+                                    timestamp: new Date().toISOString(),
+                                    is_read: false
+                                });
+                            }
+                            // Check Soda Lime
+                            if (soda_lime <= threshold && soda_lime > threshold - 5) {
+                                newAlerts.push({
+                                    id: Date.now() + Math.random() + 1,
+                                    message: `${device.name} (${device.location}): Soda Lime efficiency is at ${threshold}%!`,
+                                    receiver_type: threshold <= 20 ? 'Doctor' : 'Technician',
+                                    timestamp: new Date().toISOString(),
+                                    is_read: false
+                                });
+                            }
+                        });
+                    });
+
+                    if (newAlerts.length > 0) {
+                        setNotifications(prev => {
+                            // Prevent duplicate recent alerts for the same message
+                            const uniqueNew = newAlerts.filter(na => !prev.some(pn => pn.message === na.message && (new Date() - new Date(pn.timestamp)) < 60000));
+                            // Prepend user name to new alerts if logged in
+                            const updatedNewAlerts = uniqueNew.map(alert => ({
+                                ...alert,
+                                message: userData.name ? `[${userData.name}] ${alert.message}` : alert.message
+                            }));
+                            return [...updatedNewAlerts, ...prev];
+                        });
+
+                        // Notify via popup for critical ones (<= 20%)
+                        const critical = newAlerts.find(a => (a.message.includes('20%') || a.message.includes('10%')) && a.id !== lastInterruptId);
+                        if (critical) {
+                            const popMsg = userData.name ? `[${userData.name}] ${critical.message}` : critical.message;
+                            setPopupMessage(popMsg);
+                            setShowAIPopup(true);
+                            setLastInterruptId(critical.id);
+                        }
+                    }
+                };
+
+                // Run check periodically
+                const interval = setInterval(checkThresholds, 8000);
+                return () => clearInterval(interval);
+            }, [devices]);
+
+            const typeMessage = async (text, callback) => {
+                let currentText = "";
+                const words = text.split(" ");
+                for (let i = 0; i < words.length; i++) {
+                    currentText += words[i] + " ";
+                    callback(currentText);
+                    await new Promise(resolve => setTimeout(resolve, 30 + Math.random() * 40));
+                }
+            };
+
+            useEffect(() => {
+                fetchData();
+                const interval = setInterval(fetchData, 5000);
+                return () => clearInterval(interval);
+            }, []);
+
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (window.lucide) lucide.createIcons();
+                }, 100);
+                return () => clearTimeout(timer);
+            }, [activeTab, isLoggedIn, devices.length, notifications.length]);
+
+            useEffect(() => {
+                if (chatEndRef.current) {
+                    chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, [chatMessages]);
+
+
+
+
+
+            const handleAddItem = async () => {
+                try {
+                    const response = await fetch('http://localhost:8000/devices/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: "Smart-Unit-Arrival-" + Math.floor(Math.random() * 1000),
+                            type: "Anesthesia Machine",
+                            location: "Room 103",
+                            status: "Active"
+                        })
+                    });
+                    if (response.ok) {
+                        alert("Protocol 9 Init: Smart Intelligence Layer has detected a new unit. Engineer Michael is configuring...");
+                        fetchData();
+                    }
+                } catch (err) {
+                    alert("Connection error: Ensure backend is running.");
+                }
+            };
+
+
+            const handleOrderSubmit = () => {
+                const priorityAr = orderData.priority === 'Emergency' ? 'طوارئ' : orderData.priority === 'Urgent' ? 'عاجل' : 'عادي';
+                alert(`تم إرسال الطلب بنجاح!\nالمعدة: ${orderData.equipment}\nالقسم: ${orderData.department}\nالأولوية: ${priorityAr}`);
+                setShowOrderModal(false);
+                setOrderStep(1);
+                setOrderData({ equipment: '', department: '', priority: 'Normal' });
+            };
+
+            const handleTelemetrySubmit = async () => {
+                if (!selectedDevice) return;
+
+                // Fix field names to match backend schema: gas_level and pressure (for soda lime)
+                const inputField = updateType === 'gas' ? 'pressure' : 'gas_level'; // using what was bound in the UI
+                const val = parseFloat(newTelemetry[inputField]);
+                if (isNaN(val)) return;
+
+                // Send to backend so Hardware Bridge can read it!
+                try {
+                    const payload = {
+                        gas_level: updateType === 'gas' ? val : (selectedDevice.health?.gas_level || 100),
+                        pressure: updateType === 'gas' ? val : (selectedDevice.health?.pressure || 100),
+                        soda_lime: updateType === 'soda' ? val : (selectedDevice.health?.soda_lime || 100),
+                        flow_rate: selectedDevice.health?.flow_rate || 5.0,
+                        battery_level: selectedDevice.health?.battery_level || 100.0
+                    };
+                    await fetch(`http://localhost:8000/devices/${selectedDevice.id}/telemetry`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } catch (e) {
+                    console.error("Backend sync failed", e);
+                }
+
+                setShowTelemetryModal(false);
+                const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+                await sleep(500);
+
+                const isCritical = val < 45;
+                const playBeep = () => {
+                    try {
+                        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                        const oscillator = audioCtx.createOscillator();
+                        oscillator.type = updateType === 'gas' ? 'sawtooth' : 'sine';
+                        oscillator.frequency.setValueAtTime(updateType === 'gas' ? 900 : 440, audioCtx.currentTime);
+                        oscillator.connect(audioCtx.destination);
+                        oscillator.start();
+                        oscillator.stop(audioCtx.currentTime + 0.5);
+                    } catch (e) { }
+                };
+
+                if (isCritical) {
+                    if (!window.activeAlarmInterval) {
+                        playBeep();
+                        window.activeAlarmInterval = setInterval(playBeep, 1000);
+                    }
+                } else {
+                    if (window.activeAlarmInterval) {
+                        clearInterval(window.activeAlarmInterval);
+                        window.activeAlarmInterval = null;
+                    }
+                }
+
+                const sensorName = updateType === 'gas' ? 'مؤشر الغاز' : updateType === 'soda' ? 'كفاءة الجير' : 'سنسور';
+                const msg = val < 45 
+                    ? `الجهاز في حالة حرجة | الجهاز: ${selectedDevice.name} | السنسور: ${sensorName} | القراءة: ${val}`
+                    : `الأجهزة في حالة جيدة | الجهاز: ${selectedDevice.name} | السنسور: ${sensorName} | القراءة: ${val}`;
+                
+                setNotifications(prev => [{
+                    id: Date.now(),
+                    message: msg,
+                    timestamp: new Date().toISOString(),
+                    receiver_type: val < 45 ? 'Doctor' : 'Technician',
+                    severity: val < 45 ? 'danger' : 'success',
+                    is_read: false
+                }, ...prev].slice(0, 50));
+
+                setDevices(prev => prev.map(d => {
+                    if (d.id === selectedDevice.id) {
+                        const field = updateType === 'gas' ? 'pressure' : 'soda_lime';
+                        const historyKey = updateType === 'gas' ? 'history' : 'soda_history';
+                        const oldHist = d[historyKey] || [];
+                        const newHist = oldHist.length === 0 ? Array.from({ length: 15 }, (_, i) => val + (Math.sin(i) * 0.4)) : [...oldHist, val].slice(-15);
+                        
+                        return {
+                            ...d,
+                            [historyKey]: newHist,
+                            health: {
+                                ...d.health,
+                                [field]: val,
+                                gas_level: updateType === 'gas' ? val : (d.health?.gas_level || 100),
+                                pressure: updateType === 'gas' ? val : (d.health?.pressure || 100),
+                                soda_lime: updateType === 'soda' ? val : (d.health?.soda_lime || 100),
+                                status: isCritical ? 'Critical' : 'Active'
+                            }
+                        };
+                    }
+                    return d;
+                }));
+            };
+
+            const handleAutoTrain = async () => {
+                if (!selectedDevice) return;
+
+                setShowTelemetryModal(false);
+                const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+                await sleep(400);
+
+                try {
+                    for (let i = 0; i < 6; i++) {
+                        let val;
+                        if (i === 5) {
+                            // Last reading must be greater than 45
+                            val = parseFloat((46 + Math.random() * 50).toFixed(1));
+                        } else {
+                            const isCriticalReading = Math.random() < 0.4;
+                            val = parseFloat((isCriticalReading ? (30 + Math.random() * 14) : (88 + Math.random() * 8)).toFixed(1));
+                        }
+                        
+                        // Sync to Backend
+                        try {
+                            const payload = {
+                                gas_level: updateType === 'gas' ? val : (selectedDevice.health?.gas_level || 100),
+                                pressure: updateType === 'gas' ? val : (selectedDevice.health?.pressure || 100),
+                                soda_lime: updateType === 'soda' ? val : (selectedDevice.health?.soda_lime || 100),
+                                flow_rate: selectedDevice.health?.flow_rate || 5.0,
+                                battery_level: selectedDevice.health?.battery_level || 100.0
+                            };
+                            await fetch(`http://localhost:8000/devices/${selectedDevice.id}/telemetry`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                        } catch (e) { }
+
+                        setDevices(prev => prev.map(d => {
+                            if (d.id === selectedDevice.id) {
+                                const updates = {};
+                                const newHealth = { ...d.health };
+                                
+                                if (updateType === 'gas') {
+                                    updates.history = [...(d.history || []), val].slice(-15);
+                                    newHealth.gas_level = val;
+                                    newHealth.pressure = val;
+                                } else {
+                                    updates.soda_history = [...(d.soda_history || []), val].slice(-15);
+                                    newHealth.soda_lime = val;
+                                    newHealth.pressure = val;
+                                }
+
+                                const playBeep = () => {
+                                    try {
+                                        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                                        const oscillator = audioCtx.createOscillator();
+                                        oscillator.type = updateType === 'gas' ? 'sawtooth' : 'sine';
+                                        oscillator.frequency.setValueAtTime(updateType === 'gas' ? 900 : 440, audioCtx.currentTime);
+                                        oscillator.connect(audioCtx.destination);
+                                        oscillator.start();
+                                        oscillator.stop(audioCtx.currentTime + 0.5);
+                                    } catch (e) { }
+                                };
+
+                                if (val < 45) {
+                                    if (!window.activeAlarmInterval) {
+                                        playBeep();
+                                        window.activeAlarmInterval = setInterval(playBeep, 1000);
+                                    }
+                                } else {
+                                    if (window.activeAlarmInterval) {
+                                        clearInterval(window.activeAlarmInterval);
+                                        window.activeAlarmInterval = null;
+                                    }
+                                }
+
+                                const sensorName = updateType === 'gas' ? 'مؤشر الغاز' : 'كفاءة الجير';
+                                const msg = val < 45 
+                                    ? `الجهاز في حالة حرجة | الجهاز: ${d.name} | السنسور: ${sensorName} | القراءة: ${val}`
+                                    : `الأجهزة في حالة جيدة | الجهاز: ${d.name} | السنسور: ${sensorName} | القراءة: ${val}`;
+                                
+                                setNotifications(prevNotifs => [{
+                                    id: Date.now() + Math.random(),
+                                    message: msg,
+                                    timestamp: new Date().toISOString(),
+                                    receiver_type: val < 45 ? 'Doctor' : 'Technician',
+                                    severity: val < 45 ? 'danger' : 'success',
+                                    is_read: false
+                                }, ...prevNotifs].slice(0, 50));
+
+                                return {
+                                    ...d,
+                                    ...updates,
+                                    health: {
+                                        ...newHealth,
+                                        status: (newHealth.gas_level < 45 || newHealth.soda_lime < 45) ? 'Critical' : 'Active'
+                                    }
+                                };
+                            }
+                            return d;
+                        }));
+                        await sleep(1000);
+                    }
+
+                    alert(`اكتملت المعايرة الذكية لـ ${selectedDevice.name}. تم تحليل قراءات ${updateType === 'gas' ? 'الغاز' : 'الجير'} بنجاح.`);
+                } finally {
+                }
+            };
+
+            const renderTelemetryModal = () => {
+                if (!showTelemetryModal || !selectedDevice) return null;
+                return (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-6 animate-in fade-in duration-300">
+                        <div className="bg-white/95 backdrop-blur-2xl w-full max-w-md rounded-[3rem] shadow-2xl border border-white/20 p-10 relative overflow-hidden">
+                            <button onClick={() => setShowTelemetryModal(false)} className="absolute top-8 left-8 text-gray-400 hover:text-gray-600 transition-colors">
+                                <i data-lucide="x" className="w-6 h-6"></i>
+                            </button>
+                            <div className="mb-8">
+                                <h3 className="text-2xl font-black text-gray-900 mb-2">تحديث قراءات الحساسية</h3>
+                                <p className="text-xs font-bold text-[#4F46E5] uppercase tracking-widest">{selectedDevice.name}</p>
+                            </div>
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">متوسط قرايه السنسور</label>
+                                    <div className="w-full bg-gray-100 border border-gray-100 rounded-2xl px-5 py-4 font-bold text-gray-400 cursor-not-allowed">
+                                        45
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">
+                                        {updateType === 'gas' ? 'ادخال قرايه الغاز' : 'ادخال كفاءة الجير'}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 font-bold text-gray-800 outline-none focus:border-indigo-300 transition-all"
+                                        value={updateType === 'gas' ? newTelemetry.pressure : newTelemetry.gas_level}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            setNewTelemetry(prev => ({
+                                                ...prev,
+                                                [updateType === 'gas' ? 'pressure' : 'gas_level']: val
+                                            }));
+                                        }}
+                                        placeholder="ادخل القيمة هنا..."
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleAutoTrain}
+                                    translate="no"
+                                    className="w-full py-4 border-2 border-dashed border-[#4F46E5]/30 text-[#4F46E5] rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-50 transition-all"
+                                >
+                                    تدريب تلقائي
+                                </button>
+
+                                <button
+                                    onClick={handleTelemetrySubmit}
+                                    translate="no"
+                                    className="w-full py-5 bg-[#4F46E5] text-white rounded-3xl font-black text-sm shadow-xl shadow-indigo-200 hover:scale-[1.02] active:scale-95 transition-all mt-4"
+                                >
+                                    تم
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderContent = () => {
+                switch (activeTab) {
+                    case 'dashboard':
+                        return (
+                            <div className="space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {devices.length > 0 ? devices.map(dev => (
+                                        <DeviceCard
+                                            key={dev.id}
+                                            device={dev}
+                                            language={language}
+                                            onUpdate={(d, type) => {
+                                                setSelectedDevice(d);
+                                                setUpdateType(type || 'gas');
+                                                setNewTelemetry({
+                                                    gas_level: d.health?.soda_lime || '',
+                                                    pressure: d.health?.pressure || '',
+                                                    flow_rate: d.health?.flow_rate || '',
+                                                    battery_level: d.health?.battery_level || ''
+                                                });
+                                                setShowTelemetryModal(true);
+                                            }}
+                                        />
+                                    )) : (
+                                        <div className="col-span-2 text-center py-20 bg-white bg-opacity-30 rounded-3xl border-2 border-dashed border-gray-200">
+                                            <p className="text-[#1e293b] font-medium opacity-80">No devices registered.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    case 'technicians':
+                        return (
+                            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-5 duration-500">
+                                <div className="flex justify-between items-center pr-2 flex-row-reverse text-right" dir="rtl">
+                                    <div>
+                                        <h2 className="text-3xl font-black text-gray-900 tracking-tight mb-2">الفنيين المعتمدين</h2>
+                                        <p className="text-gray-500 font-bold text-sm tracking-wide">خبراء صيانة معتمدين للأجهزة الطبية</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowAddTechModal(true)}
+                                        className="py-4 px-8 bg-[#4F46E5] hover:bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2"
+                                    >
+                                        <i data-lucide="plus" className="w-5 h-5"></i>
+                                        <span>إضافة فني جديد</span>
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                    {filteredTechnicians.length > 0 ? filteredTechnicians.map((tech, i) => (
+                                        <div key={i} 
+                                            onClick={() => { setSelectedTech(tech); setShowTechModal(true); }}
+                                            className="bg-white/95 backdrop-blur-2xl p-10 rounded-[3rem] shadow-xl border border-white/50 relative group transition-all hover:scale-[1.01] cursor-pointer flex flex-col justify-between text-right"
+                                            dir="rtl"
+                                        >
+                                            <div className="flex gap-6 mb-6 flex-row-reverse">
+                                                <div className="w-16 h-16 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl flex items-center justify-center text-xl font-black text-[#4F46E5] shadow-inner border border-indigo-200/50">
+                                                    {tech.name[0]}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h3 className="text-xl font-black text-gray-900">{tech.name}</h3>
+                                                    <div className="flex items-center gap-1 text-amber-500 mt-2 justify-end flex-row-reverse">
+                                                        <i data-lucide="star" className="w-3.5 h-3.5 fill-current"></i>
+                                                        <span className="text-xs font-black">{tech.rating || '5.0'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="border-t border-gray-100 pt-4 mt-2 flex justify-between items-center flex-row-reverse">
+                                                <div className="flex flex-col gap-1 text-right items-end">
+                                                    <span className="text-xs text-gray-400 font-bold">الهاتف: {(tech.location || '').split('|||')[0] || 'غير متوفر'}</span>
+                                                    <span className="text-[11px] text-gray-400 font-bold">محل الإقامة: {(tech.location || '').split('|||')[1] || 'غير متوفر'}</span>
+                                                </div>
+                                                <span className="text-sm text-[#4F46E5] font-black">{tech.price_per_hour || tech.price || 'غير محدد'}</span>
+                                            </div>
+                                        </div>
+                                    )) : (
+                                            <p className="text-center col-span-2 text-gray-400 py-20 font-bold italic text-lg">No experts found in this region</p>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+
+                        case 'hospital':
+                        return (
+                            <div className="space-y-12 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
+                                <div className="text-center">
+                                    <div className="inline-flex items-center justify-center w-20 h-20 bg-rose-50 rounded-[2rem] mb-6">
+                                        <i data-lucide="hospital" className="w-10 h-10 text-rose-500"></i>
+                                    </div>
+                                    <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-2">سوق ادوات جهاز التخدير</h2>
+                                </div>
+
+                                <div className="space-y-8">
+                                    <div className="flex items-center justify-between px-4">
+                                        <h3 className="text-xl font-black text-gray-800">Current Orders & Delivery</h3>
+                                        <div className="px-4 py-2 bg-indigo-50 rounded-xl text-indigo-600 font-black text-xs uppercase tracking-widest">
+                                            {language === 'ar' ? '2 طلب نشط' : '2 ACTIVE ORDERS'}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {[
+                                            { name: 'طقم منظار الحنجرة', price: '120$', img: 'laryngoscope.png' },
+                                            { name: 'وحدة المبخر', price: '950$', img: 'vaporizer.png' },
+                                            { name: 'مضخة محاليل', price: '280$', img: 'vaporizer.png' },
+                                            { name: 'جهاز شفط', price: '140$', img: 'anesthesia_machine.png' },
+                                            { name: 'شاشة مراقبة العمليات', price: '450$', img: 'anesthesia_machine.png' }
+                                        ].map((item, i) => (
+                                            <div key={i} className="bg-white/80 backdrop-blur-xl p-3 rounded-3xl border border-white shadow-xl flex flex-col group hover:scale-[1.02] transition-all">
+                                                <div className="w-full h-24 bg-gray-50 rounded-2xl overflow-hidden mb-3 border border-gray-100">
+                                                    <img src={item.img} alt={item.name} className="w-full h-full object-contain p-2" />
+                                                </div>
+                                                <div className="flex justify-between items-center px-2">
+                                                    <h4 className="font-black text-gray-800 text-sm">{item.name}</h4>
+                                                    <span className="text-indigo-600 font-black text-sm">{item.price}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        <button
+                                            onClick={() => setShowOrderModal(true)}
+                                            className="group relative overflow-hidden p-1 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[3rem] shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                        >
+                                            <div className="bg-white/95 backdrop-blur-xl p-12 rounded-[2.8rem] flex flex-col items-center justify-center text-center">
+                                                <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                                    <i data-lucide="plus" className="w-10 h-10 text-indigo-600"></i>
+                                                </div>
+                                                <h3 className="text-2xl font-black text-gray-800 mb-2">سوق ادوات اجهزت التخدير</h3>
+                                                <p className="text-gray-500 font-bold max-w-xs">Submit a requisition for new medical devices or consumables</p>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    case 'maintenance':
+                        return (
+                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                                <div className="flex justify-between items-end mb-8">
+                                    <div className="text-right" dir="rtl">
+                                        <h2 className="text-3xl font-black text-gray-900 tracking-tight">Maintenance Management</h2>
+                                        <p className="text-gray-500 font-black text-sm uppercase tracking-widest mt-1 opacity-60">Schedule and track periodic device inspections</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {devices.map((dev, i) => {
+                                        const installDate = new Date(dev.created_at || Date.now());
+                                        const nextCheck = new Date(installDate);
+                                        nextCheck.setMonth(nextCheck.getMonth() + 2); // 2 months periodic check
+                                        const daysLeft = Math.ceil((nextCheck - new Date()) / (1000 * 60 * 60 * 24));
+
+                                        return (
+                                            <div key={i} className="bg-white/10 backdrop-blur-3xl p-10 rounded-[3rem] shadow-[0_8px_32px_0_rgba(31,38,135,0.2)] border border-white/20 group transition-all duration-500 hover:shadow-[0_8px_32px_0_rgba(31,38,135,0.4)] hover:bg-white/20">
+                                                <div className="flex justify-between items-start mb-8">
+                                                    <div className="text-right" dir="rtl">
+                                                        <h3 className="text-2xl font-black text-[#1e293b] mb-1">{dev.name}</h3>
+                                                        <p className="text-xs text-[#4F46E5] font-bold opacity-70">
+                                                            {language === 'ar' ? `${dev.type || 'جهاز طبي'} • ${String(i === 0 ? 'Room 102' : dev.location).replace('Room', 'الغرفة')}` : `${dev.type || 'Medical Device'} • ${i === 0 ? 'Room 102' : dev.location}`}
+                                                        </p>
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => { 
+                                                            setNewDeviceData(prev => ({ 
+                                                                ...prev,
+                                                                name: dev.name, 
+                                                                type: dev.type || ''
+                                                            })); 
+                                                            setShowRegisterModal(true); 
+                                                        }}
+                                                        className="w-12 h-12 bg-[#4F46E5] text-white rounded-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-lg shadow-indigo-100"
+                                                        title="تسجيل/تحديث الجهاز"
+                                                    >
+                                                        <i data-lucide="plus" className="w-6 h-6"></i>
+                                                    </button>
+                                                </div>
+                                                <div className="mt-8 pt-6 border-t border-indigo-50/50">
+                                                    <div className="flex items-center gap-3 mb-2">
+                                                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                                                        <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest opacity-60">
+                                                            {language === 'ar' ? 'التنبؤ بموعد الفحص القادم' : 'PREDICTED NEXT CHECK'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between items-end">
+                                                        <div className="text-xl font-black text-gray-800 tracking-tighter">
+                                                            {nextCheck.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}
+                                                        </div>
+                                                        <div className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-lg uppercase tracking-widest">
+                                                            {language === 'ar' ? 'تنبؤ ذكي' : 'AI PREDICTION'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    default:
+                        return <div>Coming Soon</div>;
+                }
+            };
+
+            const renderOrderModal = () => {
+                if (!showOrderModal) return null;
+
+                return (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-8 animate-in fade-in duration-300">
+                        <div className="glass rounded-[2.5rem] bg-white border border-gray-100 w-full max-w-2xl shadow-2xl relative overflow-hidden">
+                            {/* Modal Header */}
+                            <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                                <div>
+                                    <h3 className="text-2xl font-black text-gray-800 text-right">{t("طلب معدات")}</h3>
+                                    <p className="text-gray-500 text-sm font-medium mt-1 text-right">
+                                        {language === 'ar' ? `الخطوة ${orderStep} من 3` : `Step ${orderStep} of 3`}
+                                    </p>
+                                </div>
+                                <button onClick={() => { setShowOrderModal(false); setOrderStep(1); }} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                                    <i data-lucide="x" className="w-6 h-6 text-gray-400"></i>
+                                </button>
+                            </div>
+
+                            {/* Progress Bar */}
+                            <div className="w-full h-1.5 bg-gray-100">
+                                <div
+                                    className="h-full bg-[#4F46E5] transition-all duration-500 ease-out"
+                                    style={{ width: `${(orderStep / 3) * 100}%` }}
+                                ></div>
+                            </div>
+
+                            {/* Modal Body */}
+                            <div className="p-8 min-h-[300px]">
+                                {orderStep === 1 && (
+                                    <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                                        <h4 className="font-black text-lg text-gray-800">{t("سوق ادوات جهاز التخدير")}</h4>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {[
+                                                { name: 'جهاز التخدير المتكامل', price: '3,800$', img: 'anesthesia_machine.png' },
+                                                { name: 'طقم منظار الحنجرة', price: '120$', img: 'laryngoscope.png' },
+                                                { name: 'وحدة المبخر', price: '950$', img: 'vaporizer.png' },
+                                                { name: 'شاشة مراقبة العمليات', price: '450$', img: 'anesthesia_machine.png' },
+                                                { name: 'مضخة محاليل', price: '280$', img: 'vaporizer.png' },
+                                                { name: 'جهاز شفط', price: '140$', img: 'anesthesia_machine.png' },
+                                                { name: 'أسطوانة أكسجين', price: '85$', img: 'vaporizer.png' },
+                                                { name: 'دائرة التخدير', price: '22$', img: 'laryngoscope.png' },
+                                                { name: 'قناع تخدير', price: '9$', img: 'laryngoscope.png' }
+                                            ].map(item => (
+                                                <button
+                                                    key={item.name}
+                                                    onClick={() => setOrderData({ ...orderData, equipment: item.name, price: item.price })}
+                                                    className={`p-3 rounded-2xl border-2 text-right transition-all flex flex-col items-center gap-2 h-full ${orderData.equipment === item.name ? 'border-indigo-600 bg-indigo-50 shadow-lg' : 'border-gray-100 hover:border-indigo-200 hover:bg-white'}`}
+                                                >
+                                                    <div className="w-full h-16 bg-white rounded-xl overflow-hidden border border-gray-100 mb-1">
+                                                        <img src={item.img} alt={item.name} className="w-full h-full object-contain p-1" />
+                                                    </div>
+                                                    <div className="w-full flex justify-between items-center gap-2">
+                                                        <span className="font-bold text-gray-800 text-[11px] leading-tight flex-1">{t(item.name)}</span>
+                                                        <span className="text-[#4F46E5] font-black text-xs">
+                                                            {window.formatCurrency ? window.formatCurrency(item.price, language) : item.price}
+                                                        </span>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="mt-6 flex justify-end flex-row-reverse">
+                                            <button 
+                                                onClick={() => setOrderStep(2)} 
+                                                disabled={!orderData.equipment}
+                                                className={`px-8 py-3 rounded-xl font-black text-sm transition-all ${orderData.equipment ? 'bg-[#4F46E5] text-white hover:scale-105 shadow-xl' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                                            >
+                                                {t("التالي")}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {orderStep === 2 && (
+                                    <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                                        <h4 className="font-black text-lg text-gray-800">{t("تفاصيل الطلب")}</h4>
+                                        <div className="space-y-4">
+                                            <div dir="rtl">
+                                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{t("القسم الطالب")}</label>
+                                                <select
+                                                    value={orderData.department}
+                                                    onChange={e => setOrderData({ ...orderData, department: e.target.value })}
+                                                    className="w-full p-4 rounded-xl border-2 border-gray-200 bg-gray-50 focus:border-indigo-500 focus:outline-none outline-none font-bold text-gray-700 text-right"
+                                                >
+                                                    <option value="" disabled hidden>{t("اختر القسم...")}</option>
+                                                    <option value="ICU">{t("وحدة العناية المركزة (ICU)")}</option>
+                                                    <option value="OR">{t("غرفة العمليات (OR)")}</option>
+                                                    <option value="ER">{t("قسم الطوارئ (ER)")}</option>
+                                                    <option value="PACU">{t("غرفة الإفاقة (PACU)")}</option>
+                                                    <option value="NICU">{t("العناية المركزة لحديثي الولادة (NICU)")}</option>
+                                                    <option value="Ward">{t("الأقسام الداخلية (Wards)")}</option>
+                                                    <option value="Radiology">{t("قسم الأشعة (Radiology)")}</option>
+                                                    <option value="OPD">{t("العيادات الخارجية (OPD)")}</option>
+                                                </select>
+                                            </div>
+                                            <div dir="rtl">
+                                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{t("مستوى الأولوية")}</label>
+                                                <div className="flex gap-4">
+                                                    {[
+                                                        { id: 'Normal', label: t('عادي') },
+                                                        { id: 'Urgent', label: t('عاجل') },
+                                                        { id: 'Emergency', label: t('طوارئ') }
+                                                    ].map(level => (
+                                                        <button
+                                                            key={level.id}
+                                                            onClick={() => setOrderData({ ...orderData, priority: level.id })}
+                                                            className={`flex-1 py-3 rounded-xl border-2 font-bold transition-all ${orderData.priority === level.id ? (level.id === 'Emergency' ? 'border-rose-500 bg-rose-50 text-rose-700' : level.id === 'Urgent' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-emerald-500 bg-emerald-50 text-emerald-700') : 'border-gray-100 text-gray-500 hover:bg-gray-50'}`}
+                                                        >
+                                                            {level.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-8 flex gap-4 flex-row-reverse">
+                                            <button 
+                                                onClick={() => setOrderStep(3)} 
+                                                disabled={!orderData.department || !orderData.priority}
+                                                className={`flex-1 py-4 rounded-2xl font-black text-sm transition-all ${orderData.department && orderData.priority ? 'bg-[#4F46E5] text-white hover:scale-105 shadow-xl' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                                            >
+                                                {t("التالي")}
+                                            </button>
+                                            <button
+                                                onClick={() => setOrderStep(1)}
+                                                className="px-6 py-4 bg-gray-100 text-gray-600 rounded-2xl font-black text-sm hover:bg-gray-200 transition-all"
+                                            >
+                                                {t("رجوع")}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {orderStep === 3 && (
+                                    <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                                        <div className="text-center mb-8">
+                                            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <i data-lucide="check-circle-2" className="w-10 h-10 text-emerald-500"></i>
+                                            </div>
+                                            <h4 className="font-black text-xl text-gray-800">{t("مراجعة الطلب")}</h4>
+                                            <p className="text-gray-500 font-medium">{t("يرجى مراجعة وتأكيد التفاصيل أدناه قبل الإرسال.")}</p>
+                                        </div>
+                                        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-4 text-right" dir="rtl">
+                                            <div className="flex justify-between border-b border-gray-200 pb-3 flex-row-reverse">
+                                                <span className="text-gray-500 font-bold">{t("المعدة")}</span>
+                                                <div className="text-right">
+                                                    <p className="font-black text-gray-800">{t(orderData.equipment) || 'لم يتم الاختيار'}</p>
+                                                    <p className="text-xs text-[#4F46E5] font-black">
+                                                        {window.formatCurrency ? window.formatCurrency(orderData.price, language) : orderData.price}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-between border-b border-gray-200 pb-3 flex-row-reverse">
+                                                <span className="text-gray-500 font-bold">{t("القسم الطالب")}</span>
+                                                <span className="font-black text-gray-800">{t(orderData.department) || 'لم يتم الاختيار'}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-gray-200 pb-3 flex-row-reverse">
+                                                <span className="text-gray-500 font-bold">{t("مستوى الأولوية")}</span>
+                                                <span className="font-black text-gray-800">
+                                                    {orderData.priority === 'Emergency' ? t('طوارئ') : orderData.priority === 'Urgent' ? t('عاجل') : t('عادي')}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-4 flex-row-reverse">
+                                            <button
+                                                onClick={handleOrderSubmit}
+                                                className="flex-1 py-4 bg-[#4F46E5] text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all"
+                                            >
+                                                {t("تأكيد وإرسال الطلب")}
+                                            </button>
+                                            <button
+                                                onClick={() => setOrderStep(2)}
+                                                className="px-6 py-4 bg-gray-100 text-gray-600 rounded-2xl font-black text-sm hover:bg-gray-200 transition-all"
+                                            >
+                                                {t("رجوع")}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderTechModal = () => {
+                if (!showTechModal || !selectedTech) return null;
+
+                const tech = selectedTech;
+
+                return (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-8 animate-in fade-in duration-300">
+                        <div className="glass rounded-[3rem] bg-white border border-indigo-100 w-full max-w-xl shadow-2xl relative overflow-hidden mesh-gradient">
+                            <div className="p-10 text-right" dir="rtl">
+                                <div className="flex justify-between items-start mb-8 flex-row-reverse">
+                                    <div className="flex gap-6 flex-row-reverse text-right">
+                                        <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center text-white text-3xl font-black shadow-xl">
+                                            {tech.name.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-3 mb-1 justify-end flex-row-reverse">
+                                                <h3 className="text-2xl font-black text-gray-800">{tech.name}</h3>
+                                                <span className="px-3 py-1 bg-amber-100 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-widest">نشط</span>
+                                            </div>
+                                            <p className="text-[#4F46E5] font-bold mb-3">{tech.specialty}</p>
+                                            <div className="flex items-center gap-4 justify-end flex-row-reverse">
+                                                <div className="flex items-center gap-1.5 flex-row-reverse">
+                                                    <i data-lucide="star" className="w-4 h-4 text-amber-400 fill-current"></i>
+                                                    <span className="text-sm font-black text-gray-700">{tech.rating || '5.0'}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 text-gray-400 flex-row-reverse">
+                                                    <i data-lucide="phone" className="w-4 h-4"></i>
+                                                    <span className="text-xs font-bold">{tech.location || 'غير متوفر'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => { setShowTechModal(false); setSelectedTech(null); }} className="p-3 hover:bg-gray-100 rounded-2xl transition-colors">
+                                        <i data-lucide="x" className="w-6 h-6 text-gray-400"></i>
+                                    </button>
+                                </div>
+
+                                <div className="space-y-8">
+                                    <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
+                                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">تفاصيل الفني</h4>
+                                        <div className="space-y-2">
+                                            <p className="text-sm text-gray-600 leading-relaxed font-bold">سعر خدمة الفني: <span className="text-gray-900">{tech.price_per_hour || tech.price || 'غير محدد'}</span></p>
+                                            <p className="text-sm text-gray-600 leading-relaxed font-bold">رقم الهاتف: <span className="text-gray-900">{tech.location || 'غير متوفر'}</span></p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <a href={`tel:${(tech.location || '').split('|||')[0]}`} className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-indigo-50 hover:border-indigo-200 transition-all group flex-row-reverse">
+                                            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-[#4F46E5] group-hover:bg-[#4F46E5] group-hover:text-white transition-all">
+                                                <i data-lucide="phone" className="w-5 h-5"></i>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">اتصل بالفني</p>
+                                                <p className="text-xs font-black text-gray-800">{(tech.location || '').split('|||')[0] || 'غير متوفر'}</p>
+                                            </div>
+                                        </a>
+                                        <div className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-indigo-50 flex-row-reverse">
+                                            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-[#4F46E5]">
+                                                <i data-lucide="credit-card" className="w-5 h-5"></i>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">سعر الخدمة</p>
+                                                <p className="text-xs font-black text-gray-800">{tech.price_per_hour || tech.price || 'غير محدد'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-4">
+                                        <button onClick={() => { setShowTechModal(false); setSelectedTech(null); }} className="w-full py-5 bg-[#4F46E5] text-white rounded-[1.5rem] font-black text-sm shadow-xl shadow-indigo-100 hover:scale-[1.02] transition-all flex items-center justify-center gap-3">
+                                            تم
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+
+            const renderAddTechModal = () => {
+                if (!showAddTechModal) return null;
+                return (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-xl z-[250] flex items-center justify-center p-8 animate-in zoom-in-95 fade-in duration-500">
+                        <div className="bg-white/95 backdrop-blur-3xl rounded-[4rem] p-16 border border-white w-full max-w-2xl shadow-[0_40px_100px_rgba(79,70,229,0.15)] relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+                            
+                            <div className="text-center mb-12" dir="rtl">
+                                <h3 className="text-4xl font-black text-gray-900 mb-4 tracking-tighter">إضافة فني معتمد جديد</h3>
+                                <p className="text-gray-500 text-sm font-bold leading-relaxed max-w-md mx-auto opacity-80">
+                                    أدخل معلومات الفني لتسجيله في النظام وتعيين مهامه صيانة الأجهزة الطبية.
+                                </p>
+                            </div>
+
+                            <div className="space-y-8" dir="rtl">
+                                <div className="relative group">
+                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">اسم الفني</label>
+                                    <input
+                                        type="text"
+                                        value={newTechData.name}
+                                        onChange={e => setNewTechData({ ...newTechData, name: e.target.value })}
+                                        className="w-full px-8 py-6 rounded-3xl bg-gray-50/50 border-2 border-gray-100 text-gray-800 font-black text-lg focus:outline-none focus:border-[#4F46E5] focus:bg-white transition-all placeholder:text-gray-300"
+                                        placeholder="مثال: م. أحمد عبد الله"
+                                    />
+                                </div>
+
+                                <div className="relative group">
+                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">رقم الهاتف</label>
+                                    <input
+                                        type="text"
+                                        value={newTechData.phone}
+                                        onChange={e => setNewTechData({ ...newTechData, phone: e.target.value })}
+                                        className="w-full px-8 py-6 rounded-3xl bg-gray-50/50 border-2 border-gray-100 text-gray-800 font-black text-lg focus:outline-none focus:border-[#4F46E5] focus:bg-white transition-all placeholder:text-gray-300"
+                                        placeholder="مثال: 01012345678"
+                                    />
+                                </div>
+
+                                <div className="relative group">
+                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">محل الإقامة</label>
+                                    <input
+                                        type="text"
+                                        value={newTechData.location}
+                                        onChange={e => setNewTechData({ ...newTechData, location: e.target.value })}
+                                        className="w-full px-8 py-6 rounded-3xl bg-gray-50/50 border-2 border-gray-100 text-gray-800 font-black text-lg focus:outline-none focus:border-[#4F46E5] focus:bg-white transition-all placeholder:text-gray-300"
+                                        placeholder="مثال: القاهرة، مدينة نصر"
+                                    />
+                                </div>
+
+                                <div className="relative group">
+                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">سعر الخدمة (السعر)</label>
+                                    <input
+                                        type="text"
+                                        value={newTechData.price}
+                                        onChange={e => setNewTechData({ ...newTechData, price: e.target.value })}
+                                        className="w-full px-8 py-6 rounded-3xl bg-gray-50/50 border-2 border-gray-100 text-gray-800 font-black text-lg focus:outline-none focus:border-[#4F46E5] focus:bg-white transition-all placeholder:text-gray-300"
+                                        placeholder="مثال: 300 ج.م/ساعة"
+                                    />
+                                </div>
+
+
+
+                                <div className="flex gap-6 pt-6">
+                                    <button
+                                        onClick={handleRegisterTech}
+                                        className="flex-[2] py-6 bg-gradient-to-r from-[#4F46E5] to-[#6366f1] text-white rounded-[2rem] font-black text-xl shadow-2xl shadow-indigo-200 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
+                                    >
+                                        تم
+                                    </button>
+                                    <button
+                                        onClick={() => setShowAddTechModal(false)}
+                                        className="flex-1 py-6 bg-indigo-50 text-[#4F46E5] rounded-[2rem] font-black text-lg transition-all hover:bg-indigo-100 active:scale-[0.98]"
+                                    >
+                                        إلغاء
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderRegisterModal = () => {
+                if (!showRegisterModal) return null;
+                return (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-xl z-[250] flex items-center justify-center p-8 animate-in zoom-in-95 fade-in duration-500">
+                        <div className="bg-white/95 backdrop-blur-3xl rounded-[4rem] p-16 border border-white w-full max-w-2xl shadow-[0_40px_100px_rgba(79,70,229,0.15)] relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+                            
+                            <div className="text-center mb-12" dir="rtl">
+                                <h3 className="text-4xl font-black text-gray-900 mb-4 tracking-tighter">إضافة "رفيق ميكانيكي" جديد</h3>
+                                <p className="text-gray-500 text-sm font-bold leading-relaxed max-w-md mx-auto opacity-80">
+                                    "لنقم بتدوين بداية رحلة هذا الجهاز في سجلات الأمان الخاصة بنا، لكي نعتني بنبضه معاً."
+                                </p>
+                            </div>
+
+                            <div className="space-y-8" dir="rtl">
+                                <div className="relative group">
+                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">اسم الجهاز المستخدم</label>
+                                    <input
+                                        type="text"
+                                        value={newDeviceData.name}
+                                        onChange={e => setNewDeviceData({ ...newDeviceData, name: e.target.value })}
+                                        className="w-full px-8 py-6 rounded-3xl bg-gray-50/50 border-2 border-gray-100 text-gray-800 font-black text-lg focus:outline-none focus:border-[#4F46E5] focus:bg-white transition-all placeholder:text-gray-300"
+                                        placeholder="مثلاً: وحدة التخدير G7"
+                                    />
+                                </div>
+
+
+
+                                <div className="relative group">
+                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">وقت تسجيل الدخول</label>
+                                    <div className="relative">
+                                        <input
+                                            type="date"
+                                            value={newDeviceData.installDate}
+                                            onChange={e => setNewDeviceData({ ...newDeviceData, installDate: e.target.value })}
+                                            className="w-full px-8 py-6 rounded-3xl bg-gray-50/50 border-2 border-gray-100 text-gray-800 font-black text-lg focus:outline-none focus:border-[#4F46E5] focus:bg-white transition-all"
+                                        />
+                                        <i data-lucide="calendar" className="absolute left-8 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400 pointer-events-none"></i>
+                                    </div>
+                                </div>
+
+                                <div className="relative group">
+                                    <label className="block text-[11px] font-black text-[#4F46E5] uppercase tracking-widest mb-3 pr-2">ساعة تسجيل الدخول</label>
+                                    <div className="relative">
+                                        <input
+                                            type="time"
+                                            value={newDeviceData.registerTime}
+                                            onChange={e => setNewDeviceData({ ...newDeviceData, registerTime: e.target.value })}
+                                            className="w-full px-8 py-6 rounded-3xl bg-gray-50/50 border-2 border-gray-100 text-gray-800 font-black text-lg focus:outline-none focus:border-[#4F46E5] focus:bg-white transition-all"
+                                        />
+                                        <i data-lucide="clock" className="absolute left-8 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400 pointer-events-none"></i>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-6 pt-6">
+                                    <button
+                                        onClick={handleRegisterSubmit}
+                                        className="flex-[2] py-6 bg-gradient-to-r from-[#4F46E5] to-[#6366f1] text-white rounded-[2rem] font-black text-xl shadow-2xl shadow-indigo-200 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
+                                    >
+                                        تم
+                                    </button>
+                                    <button
+                                        onClick={() => setShowRegisterModal(false)}
+                                        className="flex-1 py-6 bg-indigo-50 text-[#4F46E5] rounded-[2rem] font-black text-lg transition-all hover:bg-indigo-100 active:scale-[0.98]"
+                                    >
+                                        إغلاق السجل
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderHelpModal = () => {
+                if (!showHelpModal) return null;
+                return (
+                    <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[300] flex items-center justify-center p-8 animate-in fade-in duration-300">
+                        <div className="glass rounded-[3rem] bg-[#1a1a2e] border border-white/10 w-full max-w-2xl shadow-2xl relative overflow-hidden mesh-gradient p-10">
+                            <div className="flex justify-between items-start mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-rose-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-rose-500/20">
+                                        <i data-lucide="book-open" className="w-6 h-6"></i>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-black text-white">فصل التصحيح: "عندما تنقطع خيوط السحاب"</h3>
+                                        <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest">Storyteller Mode • The Maintenance Chronicle</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowHelpModal(false)} className="p-3 hover:bg-white/5 rounded-2xl transition-colors">
+                                    <i data-lucide="x" className="w-6 h-6 text-gray-400"></i>
+                                </button>
+                            </div>
+
+                            <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-6 custom-scrollbar" dir="rtl">
+                                <section className="space-y-3">
+                                    <h4 className="text-indigo-400 font-black text-sm">🕰️ الفصل الأول: إيقاظ قلب المحرك (Backend)</h4>
+                                    <p className="text-gray-400 text-[11px] italic leading-relaxed">"خلف كل واجهة جميلة، يكمن محرك يحتاج ليدٍ حانية لتوقظه من سباته.."</p>
+                                    <ul className="text-gray-300 text-xs space-y-2 list-disc list-inside font-medium pr-4">
+                                        <li>توجّه إلى مخبأ المشروع الرئيسي (Main Directory).</li>
+                                        <li>أعد الحياة لملف <code className="bg-white/5 px-2 py-0.5 rounded text-rose-400 italic">start_backend.bat</code>، فهو شريان الحياة.</li>
+                                        <li className="text-rose-400 font-bold italic">نصيحة الحارس: لا تغلق النافذة السوداء، فهي النافذة التي يتنفس من خلالها مايكل.</li>
+                                    </ul>
+                                </section>
+
+                                <section className="space-y-3">
+                                    <h4 className="text-indigo-400 font-black text-sm">🌐 الفصل الثاني: مسارات النبض الرقمي (Networking)</h4>
+                                    <p className="text-gray-400 text-[11px] italic leading-relaxed">"في عالم الاتصال، النبض يجب أن يصل إلى المخرج الصحيح لكي تستمر القصة.."</p>
+                                    <ul className="text-gray-300 text-xs space-y-2 list-disc list-inside font-medium pr-4">
+                                        <li>تأكد أن السيرفر يتمركز عند بوابة المنفذ 8000.</li>
+                                        <li>تحقق من أن رابط الوثاق في واجهتنا هو: <code className="bg-white/5 px-2 py-0.5 rounded text-blue-400">http://127.0.0.1:8000</code></li>
+                                    </ul>
+                                </section>
+
+                                <section className="space-y-3">
+                                    <h4 className="text-indigo-400 font-black text-sm">🔑 الفصل الثالث: بوابات العبور والبروتوكولات (CORS)</h4>
+                                    <p className="text-gray-400 text-[11px] italic leading-relaxed">"الأمن لا يعني الانغلاق، بل يعني السماح للصديق بالمرور والاحتفاء بمقدمه.."</p>
+                                    <ul className="text-gray-300 text-xs space-y-2 list-disc list-inside font-medium pr-4">
+                                        <li>تأكد من أن حارس البوابة <code className="bg-white/5 px-2 py-0.5 rounded text-emerald-400">CORSMiddleware</code> قد أُعطي الإذن في ملف main.py.</li>
+                                        <li>اضبط قائمة المسموح لهم (allow_origins) لكي نفتح أبوابنا لعنوان واجهتك.</li>
+                                    </ul>
+                                </section>
+
+                                <section className="space-y-3">
+                                    <h4 className="text-indigo-400 font-black text-sm">🛡️ الفصل الرابع: حصون الدفاع (Firewall)</h4>
+                                    <p className="text-gray-400 text-[11px] italic leading-relaxed">"في بعض الأحيان، الحصون المنيعة قد تمنع وصول المساعدات الضرورية.. راقب جدرانك!"</p>
+                                    <ul className="text-gray-300 text-xs space-y-2 list-disc list-inside font-medium pr-4">
+                                        <li>أخبر Windows Defender بأن هذا المشروع هو "أرض استثناء" آمنة.</li>
+                                        <li>أفسح الطريق لتطبيق Python ليعبر جدران الحماية بسلام.</li>
+                                    </ul>
+                                </section>
+
+                                <div className="mt-8 p-6 bg-[#4F46E5]/10 rounded-3xl border border-indigo-500/20 shadow-inner relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-[#4F46E5]/50"></div>
+                                    <p className="text-[11px] text-indigo-300 leading-relaxed font-bold">
+                                        📜 <span className="text-indigo-400">حكمة المهندس:</span> "إذا استعصت عليك السبل، امنح الأنظمة قسطاً من الراحة.. أغلق كل النوافذ السوداء، وأعد تشغيل روح الجهاز.. فالتغيير يحكم البدء من الصفر أحياناً."
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            if (!isSystemOn) return (
+                <div className="min-h-screen bg-black flex items-center justify-center p-10 flex-col gap-8">
+                    <div className="w-32 h-32 rounded-full border-4 border-rose-500/20 flex items-center justify-center animate-pulse">
+                        <i data-lucide="power" className="w-16 h-16 text-rose-500"></i>
+                    </div>
+                    <div className="text-center">
+                        <h1 className="text-4xl font-black text-white mb-2 uppercase tracking-widest">System Offline</h1>
+                        <p className="text-rose-500/60 font-black text-sm uppercase tracking-[0.4em]">All Monitoring Protocols Suspended</p>
+                    </div>
+                    <button
+                        onClick={() => setIsSystemOn(true)}
+                        className="mt-8 px-10 py-4 bg-white text-black rounded-2xl font-black text-sm hover:scale-105 transition-all shadow-xl">
+                        REBOOT SYSTEM
+                    </button>
+                </div>
+            );
+
+            if (!sessionChecked) return null;
+            if (!isLoggedIn && existingSession) return renderSessionChoice();
+            if (!isLoggedIn) return renderLogin();
+
+            return (
+                <div className={`flex min-h-screen anesthesia-bg relative overflow-hidden`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                    <div className="anesthesia-overlay"></div>
+                    <div className="scan-line pointer-events-none"></div>
+
+                    {/* Sidebar Navigation */}
+                    <aside className="w-80 bg-slate-900/40 backdrop-blur-3xl p-8 flex flex-col gap-2 border-r border-slate-800/50 relative z-20 shadow-xl transition-all duration-700">
+                        <div className="px-2 py-6 mb-8 border-b border-slate-800/50 pb-8 flex flex-col items-center justify-center text-center">
+                            <div className="w-32 h-32 flex items-center justify-center mb-3 transition-transform hover:scale-110">
+                                <img src="logo_v4.png" alt="Shield Logo" className="w-32 h-32 object-contain drop-shadow-2xl" style={{mixBlendMode:'multiply'}} />
+                            </div>
+                            <h2 className="text-base font-black text-white tracking-widest drop-shadow-md mt-1">
+                                المساعد الطبي
+                            </h2>
+                        </div>
+
+
+                        <nav className="flex flex-col gap-2 flex-1" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                            <NavItem id="dashboard" label={t('dashboard')} icon="layout-dashboard" active={activeTab === 'dashboard'} onClick={setActiveTab} />
+                            <NavItem id="maintenance" label={t('maintenance')} icon="stethoscope" active={activeTab === 'maintenance'} onClick={setActiveTab} />
+                            <NavItem id="technicians" label={t('technicians')} icon="wrench" active={activeTab === 'technicians'} onClick={setActiveTab} />
+                            <NavItem id="hospital" label={language === 'ar' ? 'سوق الأدوات' : 'Tools Market'} icon="shopping-cart" active={activeTab === 'hospital'} onClick={setActiveTab} />
+                            
+                                {/* Removed Protocol Health Card as requested */}
+
+
+                                <button
+                                    onClick={() => {
+                                        setIsLoggedIn(false);
+                                        setExistingSession(false);
+                                        localStorage.removeItem('med_session');
+                                    }}
+                                className="mt-8 flex items-center justify-center gap-4 px-6 py-4 rounded-2xl bg-rose-50 border-2 border-rose-100 text-rose-500 hover:bg-rose-100 transition-all font-black text-sm w-full"
+                                dir="rtl"
+                            >
+                                <i data-lucide="log-out" className="w-5 h-5"></i>
+                                <span>{language === 'ar' ? 'تسجيل الخروج' : 'Logout'}</span>
+                            </button>
+                        </nav>
+
+
+                    </aside>
+
+                    {/* Main Viewport */}
+                    <main className="flex-1 p-10 overflow-y-auto relative z-10">
+                        <header className="flex justify-between items-center mb-12">
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-xl font-black text-blue-400 tracking-wide">
+                                        البنية التحتية للأجهزة الطبية
+                                    </span>
+                                    <h1 className="text-4xl font-black text-white tracking-tight drop-shadow-lg">
+                                        مختبر ذكاء المهندس مايكل
+                                    </h1>
+                                </div>
+                            <div className="flex items-center gap-6">
+                                <div className="relative group z-50">
+                                    <button className="flex items-center gap-2 px-4 py-3 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 text-white font-bold text-sm hover:bg-white/10 transition-colors">
+                                        <i data-lucide="globe" className="w-4 h-4"></i>
+                                        {{en: 'English', ar: 'العربية', de: 'Deutsch', es: 'Español', pt: 'Português', hi: 'हिन्दी', tr: 'Türkçe'}[language]}
+                                    </button>
+                                    <div className="absolute top-full mt-2 w-40 bg-white rounded-2xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col overflow-hidden">
+                                        {[
+                                            { code: 'en', label: 'English' },
+                                            { code: 'ar', label: 'العربية' },
+                                            { code: 'de', label: 'Deutsch' },
+                                            { code: 'es', label: 'Español' },
+                                            { code: 'pt', label: 'Português' },
+                                            { code: 'hi', label: 'हिन्दी' },
+                                            { code: 'tr', label: 'Türkçe' }
+                                        ].map(l => (
+                                            <button key={l.code} onClick={() => setLanguage(l.code)} className={`px-4 py-3 text-sm font-bold text-left hover:bg-gray-50 transition-colors ${language === l.code ? 'text-indigo-600 bg-indigo-50/50' : 'text-gray-600'}`}>{l.label}</button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="relative group">
+                                    <button
+                                        onClick={() => {
+                                            setShowNotifDropdown(!showNotifDropdown);
+                                            if (!showNotifDropdown) {
+                                                // Mark all as read when opening
+                                                setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+                                            }
+                                        }}
+                                        className="w-12 h-12 glass rounded-2xl flex items-center justify-center relative hover:bg-white transition-colors">
+                                        <i data-lucide="bell" className="w-5 h-5 text-gray-600"></i>
+                                        {notifications.some(n => !n.is_read) && (
+                                            <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-rose-500 border-2 border-white rounded-full animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.4)]"></span>
+                                        )}
+                                    </button>
+                                    {showNotifDropdown && (
+                                        <div className="absolute right-0 mt-2 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 p-4 z-50">
+                                            <div className="flex justify-between items-center mb-4 px-1">
+                                                <h4 className="font-black text-sm text-gray-800">{language === 'ar' ? 'الإشعارات' : 'Notifications'}</h4>
+                                                <div className="flex gap-2">
+                                                    {notifications.length > 0 && (
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); setNotifications([]); }}
+                                                                                                                    className="text-[10px] font-black text-rose-500 hover:text-rose-600 bg-rose-50 px-3 py-1.5 rounded-xl transition-all"
+                                                        >
+                                                            {language === 'ar' ? 'مسح الكل' : 'Clear All'}
+                                                        </button>
+                                                    )}
+                                                    <button onClick={() => setShowNotifDropdown(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                                                        <i data-lucide="x" className="w-4 h-4"></i>
+                                                    </button>
+                                                    
+                                                        
+                                                            
+                                                                
+                                                                
+                                                            
+                                                            
+                                                        
+                                                    
+                                                </div>
+                                            </div>
+                                            <div className="mb-6 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                                                {notifications.length === 0 ? (
+                                                    <p className="text-xs text-gray-400 text-center py-4">لا توجد إشعارات</p>
+                                                ) : (
+                                                    <div className="space-y-2">
+                                                        {notifications.map(n => (
+                                                            <div key={n.id} className={`p-3 rounded-2xl border text-right transition-all ${n.severity === 'danger' ? 'bg-rose-50 border-rose-100 text-rose-800' : n.severity === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-indigo-50 border-indigo-100 text-indigo-800'}`}>
+                                                                <p className="text-xs font-black">{n.message}</p>
+                                                                <span className="text-[9px] font-bold opacity-60 mt-2 block">{new Date(n.timestamp).toLocaleTimeString('ar-EG')}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="pt-4 border-t border-gray-100 space-y-3">
+                                                <div className="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100/50 text-right" dir="rtl">
+                                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">المستشفى</p>
+                                                    <p className="text-xs font-black text-gray-800">{loginData.hospitalName}</p>
+                                                    <p className="text-[10px] font-bold text-[#4F46E5]">كود: {loginData.hospitalCode}</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => { setIsLoggedIn(false); setLoginData({ name: '', role: '', hospitalCode: '', hospitalName: '' }); setShowProfileDropdown(false); }}
+                                                    className="w-full py-3 bg-rose-50 text-rose-500 rounded-xl font-black text-[10px] uppercase tracking-wider border border-rose-100 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center gap-2">
+                                                    <i data-lucide="log-out" className="w-4 h-4"></i>
+                                                    تسجيل الخروج
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </header>
+
+                        <div className="animate-in fade-in duration-700">
+                            {renderContent()}
+                        </div>
+                    </main>
+
+                    {/* Floating AI Interruption HUD */}
+                    {showAIPopup && (
+                        <div className="fixed bottom-10 right-10 w-96 bg-white rounded-[2rem] border-2 border-indigo-100 shadow-[0_20px_50px_rgba(79,70,229,0.15)] animate-in slide-in-from-right-20 fade-in duration-500 z-[100] overflow-hidden">
+                            <div className="p-1 bg-indigo-50 flex justify-between items-center px-6 py-2 border-b border-indigo-100">
+                                <span className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.3em] ">Critical Protocol Override</span>
+                                <button onClick={() => setShowAIPopup(false)} className="text-gray-400 hover:text-indigo-600 transition-colors">
+                                    <i data-lucide="x" className="w-4 h-4"></i>
+                                </button>
+                            </div>
+                            <div className="p-6 flex gap-4">
+                                <div className="w-16 h-16 rounded-2xl bg-[#4F46E5] flex items-center justify-center text-white font-black text-xl shadow-lg border border-indigo-400/20 shrink-0">
+                                    EM
+                                </div>
+                                <div className="space-y-2">
+                                    <h4 className="text-sm font-black text-gray-900">Medical System: Critical Action Required</h4>
+                                    <p className="text-xs text-gray-600 leading-relaxed font-medium">"{popupMessage}"</p>
+                                    <div className="pt-2 flex gap-3">
+                                        <button
+                                            onClick={() => { setActiveTab('dashboard'); setShowAIPopup(false); }}
+                                            className="px-4 py-1.5 bg-[#4F46E5]/20 hover:bg-[#4F46E5]/40 rounded-lg text-[10px] font-black text-indigo-300 uppercase border border-indigo-500/30 transition-all"
+                                        >
+                                            تحقيق
+                                        </button>
+                                        <button
+                                            onClick={() => setShowAIPopup(false)}
+                                            className="px-4 py-1.5 hover:bg-white/5 rounded-lg text-[10px] font-black text-gray-400 uppercase transition-all"
+                                        >
+                                            Dismiss
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {renderTelemetryModal()}
+                    {renderOrderModal()}
+                    {renderTechModal()}
+                    {renderAddTechModal()}
+                    {renderRegisterModal()}
+                    {renderHelpModal()}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+
+        // Initialize Lucide icons
+        const initIcons = () => {
+            if (window.lucide) {
+                lucide.createIcons();
+            } else {
+                setTimeout(initIcons, 50);
+            }
+        };
+        initIcons();
+    </script>
+</body>
+
+</html>
